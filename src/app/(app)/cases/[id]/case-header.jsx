@@ -17,6 +17,7 @@ import {
   updateStageAction,
 } from '@/app/actions/caseDetailActions';
 import { CASE_STAGES } from '@/lib/case-stages';
+import AgentSelect from '@/components/agent-select';
 
 const CATEGORY_STYLES = {
   NO_RENOVABLE: {
@@ -34,6 +35,11 @@ const CATEGORY_STYLES = {
     className:
       'bg-zinc-100 text-zinc-600 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700',
   },
+  ENTRANTE: {
+    label: 'Entrante / Cambio de plan',
+    className:
+      'bg-cyan-50 text-cyan-700 ring-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/30',
+  },
 };
 
 const selectClasses =
@@ -43,7 +49,7 @@ function fullAddress(client) {
   return [client.address, client.city, client.state, client.zip].filter(Boolean).join(', ');
 }
 
-export default function CaseHeader({ aepCase, client, currentUser }) {
+export default function CaseHeader({ aepCase, client, currentUser, agents }) {
   const serverLock = {
     id: aepCase.lockedByUser?.id || null,
     name: aepCase.lockedByUser?.name || '',
@@ -193,6 +199,17 @@ export default function CaseHeader({ aepCase, client, currentUser }) {
           </div>
 
           <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                Agente
+              </span>
+              <AgentSelect
+                caseId={aepCase.id}
+                assignedToId={aepCase.assignedTo?.id || ''}
+                agents={agents}
+              />
+            </label>
+
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
                 Etapa

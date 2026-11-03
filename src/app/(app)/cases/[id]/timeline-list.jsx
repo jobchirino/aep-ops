@@ -27,6 +27,11 @@ const EVENT_STYLES = {
     className:
       'bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/30',
   },
+  ASSIGNMENT: {
+    label: 'Asignación',
+    className:
+      'bg-cyan-50 text-cyan-700 ring-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/30',
+  },
   DOCS_READY: {
     label: 'Docs listos',
     className:

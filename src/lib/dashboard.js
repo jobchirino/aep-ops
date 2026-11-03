@@ -60,6 +60,7 @@ export async function getDashboardData({ stage, agent, userId, searchTerm }) {
         COUNT(*) FILTER (WHERE category = 'NO_RENOVABLE')::int AS "noRenovable",
         COUNT(*) FILTER (WHERE category = 'NO_COMISIONABLE')::int AS "noComisionable",
         COUNT(*) FILTER (WHERE category = 'CANCELADO')::int AS "cancelado",
+        COUNT(*) FILTER (WHERE category = 'ENTRANTE')::int AS "entrante",
         COUNT(*) FILTER (WHERE stage = 'CERRADO_DOCS_ENVIADOS')::int AS "closed"
       FROM "AepCase"
     `,
@@ -77,6 +78,7 @@ export async function getDashboardData({ stage, agent, userId, searchTerm }) {
         c."radiusUrl" AS "clientRadiusUrl",
         ua.name AS "assignedName",
         ua."shortCode" AS "assignedShortCode",
+        ua.id AS "assignedId",
         ul.name AS "lockedName",
         ul."shortCode" AS "lockedShortCode",
         lt.content AS "lastNoteContent",
@@ -105,6 +107,7 @@ export async function getDashboardData({ stage, agent, userId, searchTerm }) {
     noRenovable: 0,
     noComisionable: 0,
     cancelado: 0,
+    entrante: 0,
     closed: 0,
   };
 
@@ -122,7 +125,7 @@ export async function getDashboardData({ stage, agent, userId, searchTerm }) {
       radiusUrl: row.clientRadiusUrl,
     },
     assignedTo: row.assignedName
-      ? { name: row.assignedName, shortCode: row.assignedShortCode }
+      ? { id: row.assignedId, name: row.assignedName, shortCode: row.assignedShortCode }
       : null,
     lockedByUser: row.lockedName
       ? { name: row.lockedName, shortCode: row.lockedShortCode }
@@ -143,6 +146,7 @@ export async function getDashboardData({ stage, agent, userId, searchTerm }) {
   return {
     cases,
     stats,
-    totalCases: stats.noRenovable + stats.noComisionable + stats.cancelado,
+    totalCases:
+      stats.noRenovable + stats.noComisionable + stats.cancelado + stats.entrante,
   };
 }

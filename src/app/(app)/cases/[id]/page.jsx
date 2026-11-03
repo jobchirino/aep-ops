@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getAgents } from '@/lib/users';
 import CaseHeader from './case-header';
 import CaseWorkspace from './case-workspace';
 import NoteComposer from './note-composer';
@@ -42,19 +43,22 @@ export default async function CaseDetailPage({ params }) {
 
   const { id } = await params;
 
-  const aepCase = await prisma.aepCase.findUnique({
-    where: { id },
-    include: {
-      client: true,
-      assignedTo: { select: { id: true, name: true, shortCode: true, role: true } },
-      lockedByUser: { select: { id: true, name: true, shortCode: true } },
-      timeline: {
-        take: 200,
-        orderBy: { createdAt: 'desc' },
-        include: { user: { select: { name: true, shortCode: true, role: true } } },
+  const [aepCase, agents] = await Promise.all([
+    prisma.aepCase.findUnique({
+      where: { id },
+      include: {
+        client: true,
+        assignedTo: { select: { id: true, name: true, shortCode: true, role: true } },
+        lockedByUser: { select: { id: true, name: true, shortCode: true } },
+        timeline: {
+          take: 200,
+          orderBy: { createdAt: 'desc' },
+          include: { user: { select: { name: true, shortCode: true, role: true } } },
+        },
       },
-    },
-  });
+    }),
+    getAgents(),
+  ]);
 
   if (!aepCase) {
     notFound();
@@ -140,6 +144,7 @@ export default async function CaseDetailPage({ params }) {
         aepCase={caseData}
         client={clientData}
         currentUser={user}
+        agents={agents}
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] xl:grid-cols-[minmax(0,1fr)_400px]">

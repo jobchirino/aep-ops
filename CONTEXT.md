@@ -18,7 +18,7 @@
 > Tatiana **no es usuaria del sistema**: recibe las aplicaciones por un chat externo.
 
 ## 3. Flujo Operativo del Caso (Pipeline AEP)
-Cada cliente de AEP proviene de una de 3 listas (`NO_RENOVABLE`, `NO_COMISIONABLE`, `CANCELADO`) y pasa por estas etapas (`stage`):
+Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISIONABLE`, `CANCELADO` o `ENTRANTE`. Los casos `ENTRANTE` son clientes que ya existen en Radius y llaman por su cuenta para un cambio de plan; se agregan desde el buscador de clientes del dashboard. Y pasa por estas etapas (`stage`):
 1. `SIN_CONTACTAR`: Pendiente de primera llamada.
 2. `EN_SEGUIMIENTO`: No contestó (NC), se dejó SMS/Voicemail, o pidió que lo llamen en otra fecha (`nextFollowUpAt`).
 3. `PUNTOS_COMPLETOS`: Ya se levantaron los 21 puntos en llamada y se generaron los 13 puntos.
@@ -32,6 +32,11 @@ Cada cliente de AEP proviene de una de 3 listas (`NO_RENOVABLE`, `NO_COMISIONABL
 ## 4. Bloqueo en Tiempo Real ("En Llamada")
 - Cuando un agente abre un caso y pulsa **"📞 Marcar En Llamada"**, el campo `lockedByUserId` se asigna a ese agente y `lockedAt` guarda la hora.
 - En la lista general, los demás agentes ven un indicador rojo/ámbar: `"📞 Job está trabajando este caso ahora"` para evitar llamadas duplicadas.
+
+### 4.1 Asignación de casos
+- Cualquier agente puede cambiar el agente asignado desde la cabecera del detalle o desde el select de la columna "Agente" del dashboard.
+- Cada cambio registra un `TimelineEvent` de tipo `ASSIGNMENT` firmado por el usuario en sesión.
+- El cliente debe existir previamente en Radius; un cliente solo puede tener un caso AEP. Si ya tiene uno, se abre el existente.
 
 ## 5. Reglas de Negocio Críticas
 ### A. De 21 Puntos a 13 Puntos

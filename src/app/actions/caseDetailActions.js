@@ -120,6 +120,8 @@ async function findCase(caseId) {
     select: {
       id: true,
       stage: true,
+      assignedToId: true,
+      assignedTo: { select: { id: true, name: true, shortCode: true } },
       lockedByUserId: true,
       lockedByUser: { select: { name: true, shortCode: true } },
     },
@@ -184,6 +186,66 @@ export async function updateStageAction(caseId, nextStage) {
   } catch (error) {
     console.error('[caseDetailActions] Error al cambiar la etapa:', error);
     return { ok: false, error: 'No se pudo cambiar la etapa. Intenta de nuevo.' };
+  }
+}
+
+/**
+ * Asigna o reasigna un caso a un agente (o lo deja sin asignar).
+ */
+export async function assignCaseAction(caseId, agentId) {
+  const user = await requireUser();
+  const aepCase = await findCase(caseId);
+
+  if (!aepCase) {
+    return { ok: false, error: 'El caso no existe.' };
+  }
+
+  const normalizedAgentId = agentId ? String(agentId).trim() : null;
+  let agent = null;
+
+  if (normalizedAgentId) {
+    agent = await prisma.user.findFirst({
+      where: { id: normalizedAgentId, role: 'AGENT' },
+      select: { id: true, name: true, shortCode: true },
+    });
+
+    if (!agent) {
+      return { ok: false, error: 'El agente seleccionado no es válido.' };
+    }
+  }
+
+  if ((aepCase.assignedToId || null) === (agent?.id || null)) {
+    return { ok: true, assignedTo: agent };
+  }
+
+  const content = agent
+    ? `Caso asignado a ${agent.name} (${agent.shortCode})`
+    : 'Caso marcado sin asignar';
+  const radiusFormattedNote = formatRadiusNote(user.shortCode, content);
+
+  try {
+    await prisma.$transaction([
+      prisma.aepCase.update({
+        where: { id: aepCase.id },
+        data: { assignedToId: agent?.id || null },
+      }),
+      prisma.timelineEvent.create({
+        data: {
+          caseId: aepCase.id,
+          userId: user.id,
+          eventType: 'ASSIGNMENT',
+          content,
+          radiusFormattedNote,
+        },
+      }),
+    ]);
+
+    revalidateCase(aepCase.id);
+
+    return { ok: true, assignedTo: agent };
+  } catch (error) {
+    console.error('[caseDetailActions] Error al asignar el caso:', error);
+    return { ok: false, error: 'No se pudo cambiar el agente asignado.' };
   }
 }
 

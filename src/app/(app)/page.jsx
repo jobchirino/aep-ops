@@ -6,12 +6,16 @@ import {
   ArrowUpRight,
   Ban,
   Inbox,
+  PhoneIncoming,
+  Plus,
   RefreshCw,
   Target,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { getDashboardData } from '@/lib/dashboard';
+import { getAgents } from '@/lib/users';
 import NcSmsButton from '@/components/nc-sms-button';
+import AgentSelect from '@/components/agent-select';
 import { Progress } from '@/components/ui/progress';
 import CaseFilters from './case-filters';
 import CaseSearch from './case-search';
@@ -89,14 +93,14 @@ const CATEGORY_CARDS = [
     iconClassName:
       'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
   },
+  {
+    category: 'ENTRANTE',
+    label: 'Entrantes',
+    Icon: PhoneIncoming,
+    iconClassName:
+      'bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-300',
+  },
 ];
-
-const AVATAR_STYLES = {
-  JOB: 'from-sky-500 to-cyan-500',
-  MARIA: 'from-rose-500 to-pink-500',
-  GABY: 'from-emerald-500 to-teal-500',
-  FER: 'from-amber-500 to-orange-600',
-};
 
 const noteDateFormatter = new Intl.DateTimeFormat('es-US', {
   month: 'short',
@@ -107,16 +111,6 @@ const noteDateFormatter = new Intl.DateTimeFormat('es-US', {
 
 function firstValue(value) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function getInitials(name) {
-  return String(name || '')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word.charAt(0))
-    .join('')
-    .toUpperCase();
 }
 
 export default async function DashboardPage({ searchParams }) {
@@ -136,17 +130,21 @@ export default async function DashboardPage({ searchParams }) {
   const searchTerm =
     typeof queryParam === 'string' ? queryParam.trim().slice(0, 80) : '';
 
-  const { cases, stats, totalCases } = await getDashboardData({
-    stage,
-    agent,
-    userId: user.id,
-    searchTerm,
-  });
+  const [{ cases, stats, totalCases }, agents] = await Promise.all([
+    getDashboardData({
+      stage,
+      agent,
+      userId: user.id,
+      searchTerm,
+    }),
+    getAgents(),
+  ]);
 
   const countByCategory = (category) => {
     if (category === 'NO_RENOVABLE') return stats.noRenovable;
     if (category === 'NO_COMISIONABLE') return stats.noComisionable;
     if (category === 'CANCELADO') return stats.cancelado;
+    if (category === 'ENTRANTE') return stats.entrante;
     return 0;
   };
 
@@ -155,17 +153,27 @@ export default async function DashboardPage({ searchParams }) {
 
   return (
     <div className="space-y-5">
-      <section className="flex flex-col gap-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-400">
-          AEP 2027 · Operación
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Dashboard de casos
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          {totalCases} casos cargados. Filtra por etapa o agente y registra el seguimiento
-          directamente desde la tabla.
-        </p>
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-400">
+            AEP 2027 · Operación
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Dashboard de casos
+          </h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {totalCases} casos cargados. Filtra por etapa o agente y registra el seguimiento
+            directamente desde la tabla.
+          </p>
+        </div>
+
+        <Link
+          href="/cases/new"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30"
+        >
+          <Plus className="h-4 w-4" />
+          Nuevo caso AEP
+        </Link>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -178,9 +186,9 @@ export default async function DashboardPage({ searchParams }) {
             iconClassName={iconClassName}
           />
         ))}
-
-        <GoalCard count={closedDocsCount} goal={AEP_GOAL} percent={goalPercent} />
       </section>
+
+      <GoalCard count={closedDocsCount} goal={AEP_GOAL} percent={goalPercent} />
 
       <section className="flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-wrap items-center gap-2 px-1">
@@ -240,7 +248,9 @@ export default async function DashboardPage({ searchParams }) {
                   </td>
                 </tr>
               ) : (
-                cases.map((aepCase) => <CaseRow key={aepCase.id} aepCase={aepCase} />)
+                cases.map((aepCase) => (
+                  <CaseRow key={aepCase.id} aepCase={aepCase} agents={agents} />
+                ))
               )}
             </tbody>
           </table>
@@ -277,47 +287,47 @@ function GoalCard({ count, goal, percent }) {
   const goalReached = count >= goal;
 
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 shadow-sm dark:border-emerald-500/30 dark:from-emerald-500/10 dark:via-zinc-900 dark:to-teal-500/10">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase leading-tight tracking-wide text-emerald-700 dark:text-emerald-300">
-            Meta de Aplicaciones AEP
-          </p>
-          <p className="mt-0.5 text-[10px] text-emerald-600/80 dark:text-emerald-300/70">
-            Progreso de cierres · Docs enviados
-          </p>
+    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 shadow-sm dark:border-emerald-500/30 dark:from-emerald-500/10 dark:via-zinc-900 dark:to-teal-500/10">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+            <Target className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase leading-tight tracking-wide text-emerald-700 dark:text-emerald-300">
+              Meta de Aplicaciones AEP
+            </p>
+            <p className="mt-0.5 text-[10px] text-emerald-600/80 dark:text-emerald-300/70">
+              Progreso de cierres · Docs enviados
+            </p>
+          </div>
         </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
-          <Target className="h-5 w-5" />
-        </span>
-      </div>
 
-      <div className="mt-3">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-semibold leading-none tabular-nums text-zinc-900 dark:text-zinc-50">
+        <div className="flex items-baseline gap-2 sm:justify-end">
+          <span className="text-3xl font-semibold leading-none tabular-nums text-zinc-900 dark:text-zinc-50">
             {count}
           </span>
-          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
             de {goal} aplicaciones
           </span>
-          <span className="ml-auto text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
+          <span className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
             {percent}%
           </span>
         </div>
-
-        <Progress
-          value={percent}
-          aria-label={`Meta de aplicaciones AEP: ${count} de ${goal}`}
-          className="mt-2 h-2 bg-emerald-100 dark:bg-emerald-500/15"
-          indicatorClassName="bg-emerald-600"
-        />
-
-        <p className="mt-1.5 text-[10px] text-emerald-700/80 dark:text-emerald-300/70">
-          {goalReached
-            ? '¡Meta alcanzada!'
-            : `${goal - count} aplicaciones para alcanzar la meta`}
-        </p>
       </div>
+
+      <Progress
+        value={percent}
+        aria-label={`Meta de aplicaciones AEP: ${count} de ${goal}`}
+        className="mt-3 h-2.5 bg-emerald-100 dark:bg-emerald-500/15"
+        indicatorClassName="bg-emerald-600"
+      />
+
+      <p className="mt-1.5 text-[10px] text-emerald-700/80 dark:text-emerald-300/70">
+        {goalReached
+          ? '¡Meta alcanzada!'
+          : `${goal - count} aplicaciones para alcanzar la meta`}
+      </p>
     </div>
   );
 }
@@ -338,12 +348,10 @@ function StageBadge({ stage }) {
   );
 }
 
-function CaseRow({ aepCase }) {
+function CaseRow({ aepCase, agents }) {
   const client = aepCase.client;
   const lastEvent = aepCase.timeline?.[0];
   const phone = client?.phone || client?.cell || null;
-  const agent = aepCase.assignedTo;
-  const avatarGradient = agent ? AVATAR_STYLES[agent.shortCode] ?? 'from-zinc-500 to-zinc-600' : '';
 
   return (
     <tr className="align-top transition hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30">
@@ -395,25 +403,12 @@ function CaseRow({ aepCase }) {
       </td>
 
       <td className="px-4 py-3">
-        {agent ? (
-          <span className="flex items-center gap-2">
-            <span
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${avatarGradient} text-[10px] font-semibold text-white`}
-            >
-              {getInitials(agent.name)}
-            </span>
-            <span className="min-w-0">
-              <span className="block max-w-[120px] truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">
-                {agent.name}
-              </span>
-              <span className="block font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
-                {agent.shortCode}
-              </span>
-            </span>
-          </span>
-        ) : (
-          <span className="text-xs italic text-zinc-400 dark:text-zinc-500">Sin asignar</span>
-        )}
+        <AgentSelect
+          caseId={aepCase.id}
+          assignedToId={aepCase.assignedTo?.id || ''}
+          agents={agents}
+          compact
+        />
       </td>
 
       <td className="px-4 py-3">

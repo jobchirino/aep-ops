@@ -117,6 +117,8 @@ export function generateThirteenPointsText(client, aepCase) {
       ? 'RW - Cambio Plan (plan No comisionable 2027)'
       : aepCase?.category === 'NO_RENOVABLE'
       ? 'RW - Cambio Plan (plan No renovable 2027)'
+      : aepCase?.category === 'ENTRANTE'
+      ? 'RW - Cambio de Plan (cliente entrante)'
       : 'RW - Recuperación Cliente Cancelado');
   const periodo = aepCase?.enrollmentPeriod || 'AEP';
   const trabajoAnterior = p21.tipoTrabajoTenia || p13.trabajoAnterior || '';

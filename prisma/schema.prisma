@@ -66,7 +66,7 @@ model AepCase {
   client              Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   // Clasificación AEP inicial (del Excel AEP 2027)
-  category            String    // NO_RENOVABLE | NO_COMISIONABLE | CANCELADO
+  category            String    // NO_RENOVABLE | NO_COMISIONABLE | CANCELADO | ENTRANTE
   currentCarrier      String?
   currentPlanName     String?
   currentPlanId       String?   // Código limpio ej: H5521-419
