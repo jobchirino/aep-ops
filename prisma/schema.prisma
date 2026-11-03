@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(cuid())
+  name         String
+  shortCode    String          @unique // JOB, MARIA, GABY, FER
+  email        String          @unique
+  passwordHash String
+  role         String          @default("AGENT") // AGENT
+  createdAt    DateTime        @default(now())
+
+  assignedCases AepCase[]      @relation("AssignedAgent")
+  lockedCases   AepCase[]      @relation("LockedByAgent")
+  timelineLogs  TimelineEvent[]
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  radiusRecordId  String   @unique
+  masterRecordId  String?
+  fullName        String
+  normalizedName  String
+  dob             String?
+  gender          String?
+  phone           String?
+  cell            String?
+  phoneNormalized String?
+  cellNormalized  String?
+  email           String?
+  address         String?
+  city            String?
+  state           String?
+  zip             String?
+  county          String?
+  mbi             String?
+  ssn             String?
+  medicaidNumber  String?
+  memberId        String?
+  partADate       String?
+  partBDate       String?
+  lis             String?  @default("NO")
+  paad            String?  @default("NO")
+  radiusUrl       String?
+  rawPoliciesJson Json?    // Historial de hasta 6 pólizas exportadas de Radius
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  aepCases        AepCase[]
+
+  @@index([normalizedName])
+  @@index([phoneNormalized])
+  @@index([cellNormalized])
+  @@index([state])
+}
+
+model AepCase {
+  id                  String    @id @default(cuid())
+  clientId            String
+  client              Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  // Clasificación AEP inicial (del Excel AEP 2027)
+  category            String    // NO_RENOVABLE | NO_COMISIONABLE | CANCELADO
+  currentCarrier      String?
+  currentPlanName     String?
+  currentPlanId       String?   // Código limpio ej: H5521-419
+  policyId            String?
+  effectiveDate       String?
+  terminationDate     String?
+  radiusStatus        String?   // Active | Termed
+  eligibleHorizonCsnp Boolean   @default(false)
+  actionRequired      String?   // Cambiar | Recuperar
+
+  // Estado del proceso y asignación
+  stage               String    @default("SIN_CONTACTAR")
+  assignedToId        String?
+  assignedTo          User?     @relation("AssignedAgent", fields: [assignedToId], references: [id])
+
+  // Bloqueo en vivo para que 2 agentes no llamen al mismo tiempo
+  lockedByUserId      String?
+  lockedByUser        User?     @relation("LockedByAgent", fields: [lockedByUserId], references: [id])
+  lockedAt            DateTime?
+
+  // Seguimiento
+  nextFollowUpAt      DateTime?
+  followUpNote        String?
+
+  // Datos de los 21 Puntos y 13 Puntos
+  twentyOnePoints     Json?
+  thirteenPoints      Json?
+
+  // Nuevo Plan (Estrategia) y cierre de documentos
+  targetCarrier       String?
+  targetPlanName      String?
+  targetPlanId        String?
+  targetEffDate       String?   @default("01/01/2027")
+  enrollmentPeriod    String?   @default("AEP")
+  citaStatus          String?   @default("NO")
+  caseNotesSummary    String?   // Ej: RW - Cambio Plan (plan No comisionable 2027)
+
+  docsChecklist       Json?     // { soa: false, enrollment: false, attestation: false, sou: false }
+  docsReady           Boolean   @default(false)
+  soaDate             DateTime?
+  enrollmentDate      DateTime?
+  sentByTatiana       Boolean   @default(false) // legacy: indica envío final
+  sentAt              DateTime?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  timeline            TimelineEvent[]
+
+  @@index([category])
+  @@index([stage])
+  @@index([assignedToId])
+}
+
+model TimelineEvent {
+  id                  String   @id @default(cuid())
+  caseId              String
+  aepCase             AepCase  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  // Firma automática del usuario en sesión
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+
+  eventType           String   // CALL_NC | CALL_ANSWERED | SMS_VOICEMAIL | STATUS_CHANGE | DOCS_READY | NOTE
+  content             String
+  radiusFormattedNote String?  // Texto pre-armado para copiar y pegar en RadiusBob
+  createdAt           DateTime @default(now())
+
+  @@index([caseId, createdAt])
+}
+
+model NonCommissionablePlan {
+  id          String   @id @default(cuid())
+  carrier     String
+  year        Int
+  state       String
+  planId      String   // Normalizado ej: H5521-419
+  rawPlanId   String
+  planName    String
+  planType    String?
+  serviceArea String?
+  statusNote  String?
+  createdAt   DateTime @default(now())
+
+  @@index([planId])
+  @@index([carrier, state, year])
+}
