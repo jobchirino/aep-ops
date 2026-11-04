@@ -71,6 +71,7 @@ export async function getDashboardData({ stage, agent, userId, searchTerm }) {
         a."currentPlanName" AS "currentPlanName",
         a."currentCarrier" AS "currentCarrier",
         a."eligibleHorizonCsnp" AS "eligibleHorizonCsnp",
+        a."nextFollowUpAt" AS "nextFollowUpAt",
         c."fullName" AS "clientFullName",
         c.state AS "clientState",
         c.phone AS "clientPhone",
@@ -117,6 +118,7 @@ export async function getDashboardData({ stage, agent, userId, searchTerm }) {
     currentPlanName: row.currentPlanName,
     currentCarrier: row.currentCarrier,
     eligibleHorizonCsnp: row.eligibleHorizonCsnp,
+    nextFollowUpAt: row.nextFollowUpAt,
     client: {
       fullName: row.clientFullName,
       state: row.clientState,

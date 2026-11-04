@@ -114,24 +114,47 @@ export default function Header({ user }) {
 }
 
 async function PendingTodayBadge({ user }) {
-  const count = await getPendingTodayCount(user);
-  const hasPending = typeof count === 'number' && count > 0;
-  const hasError = count === null;
+  const counts = await getPendingTodayCount(user);
+  const hasError = counts === null;
+  const overdue = counts?.overdue ?? 0;
+  const today = counts?.today ?? 0;
+  const hasAny = overdue > 0 || today > 0;
 
   return (
     <div
-      title="Seguimientos vencidos o para hoy: tus casos asignados + los que aún no tienen agente."
+      title="Vencidos: ya pasó su hora. Hoy: aún quedan por atender hoy. Horario de New Jersey (ET). Incluye tus casos asignados + los que no tienen agente."
       className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium ring-1 ring-inset ${
         hasError
           ? 'bg-zinc-100 text-zinc-500 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700'
-          : hasPending
+          : hasAny
             ? 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30'
             : 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30'
       }`}
     >
-      <CalendarClock className="h-3.5 w-3.5" />
-      <span className="tabular-nums font-semibold">{hasError ? '—' : count}</span>
-      <span className="hidden md:inline">pendientes hoy</span>
+      <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+      {hasError ? (
+        <span className="tabular-nums font-semibold">—</span>
+      ) : (
+        <>
+          <span
+            className={`tabular-nums font-semibold ${
+              overdue > 0 ? 'text-red-600 dark:text-red-400' : ''
+            }`}
+          >
+            {overdue}
+            <span className="hidden md:inline"> vencidos</span>
+          </span>
+          <span className="text-zinc-300 dark:text-zinc-600">·</span>
+          <span
+            className={`tabular-nums font-semibold ${
+              today > 0 ? 'text-amber-700 dark:text-amber-300' : ''
+            }`}
+          >
+            {today}
+            <span className="hidden md:inline"> hoy</span>
+          </span>
+        </>
+      )}
     </div>
   );
 }

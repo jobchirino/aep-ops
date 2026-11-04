@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Ban,
+  CalendarClock,
   Inbox,
   PhoneIncoming,
   Plus,
@@ -14,6 +15,11 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import { getDashboardData } from '@/lib/dashboard';
 import { getAgents } from '@/lib/users';
+import {
+  formatFollowUpDateTime,
+  formatShortDateTime,
+  getTodayRangeUtc,
+} from '@/lib/datetime';
 import NcSmsButton from '@/components/nc-sms-button';
 import AgentSelect from '@/components/agent-select';
 import { Progress } from '@/components/ui/progress';
@@ -102,13 +108,6 @@ const CATEGORY_CARDS = [
   },
 ];
 
-const noteDateFormatter = new Intl.DateTimeFormat('es-US', {
-  month: 'short',
-  day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-});
-
 function firstValue(value) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -150,6 +149,8 @@ export default async function DashboardPage({ searchParams }) {
 
   const closedDocsCount = stats.closed;
   const goalPercent = Math.min(100, Math.round((closedDocsCount / AEP_GOAL) * 100));
+  const followUpNow = new Date();
+  const followUpEndOfToday = getTodayRangeUtc(followUpNow).end;
 
   return (
     <div className="space-y-5">
@@ -249,7 +250,13 @@ export default async function DashboardPage({ searchParams }) {
                 </tr>
               ) : (
                 cases.map((aepCase) => (
-                  <CaseRow key={aepCase.id} aepCase={aepCase} agents={agents} />
+                  <CaseRow
+                    key={aepCase.id}
+                    aepCase={aepCase}
+                    agents={agents}
+                    now={followUpNow}
+                    endOfToday={followUpEndOfToday}
+                  />
                 ))
               )}
             </tbody>
@@ -348,10 +355,27 @@ function StageBadge({ stage }) {
   );
 }
 
-function CaseRow({ aepCase, agents }) {
+function CaseRow({ aepCase, agents, now, endOfToday }) {
   const client = aepCase.client;
   const lastEvent = aepCase.timeline?.[0];
   const phone = client?.phone || client?.cell || null;
+  const followUp = aepCase.nextFollowUpAt ? new Date(aepCase.nextFollowUpAt) : null;
+  const followUpStatus = followUp
+    ? followUp < now
+      ? 'overdue'
+      : followUp <= endOfToday
+        ? 'today'
+        : 'future'
+    : 'none';
+  const followUpLabel = followUp ? formatFollowUpDateTime(followUp) : '';
+  const followUpClassName =
+    followUpStatus === 'overdue'
+      ? 'text-red-600 dark:text-red-400'
+      : followUpStatus === 'today'
+        ? 'text-amber-700 dark:text-amber-300'
+        : followUpStatus === 'future'
+          ? 'text-zinc-500 dark:text-zinc-400'
+          : 'italic text-zinc-400 dark:text-zinc-500';
 
   return (
     <tr className="align-top transition hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30">
@@ -364,6 +388,16 @@ function CaseRow({ aepCase, agents }) {
         </div>
         <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
           {client?.state || 'Sin estado'} · {phone || 'Sin teléfono'}
+        </p>
+        <p className={`mt-0.5 flex items-center gap-1 text-[11px] font-medium ${followUpClassName}`}>
+          <CalendarClock className="h-3 w-3 shrink-0" />
+          {followUp
+            ? followUpStatus === 'overdue'
+              ? `Vencido · ${followUpLabel}`
+              : followUpStatus === 'today'
+                ? `Hoy · ${followUpLabel}`
+                : `Seguimiento · ${followUpLabel}`
+            : 'Sin seguimiento'}
         </p>
         {aepCase.lockedByUser ? (
           <span className="mt-1 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30">
@@ -421,7 +455,7 @@ function CaseRow({ aepCase, agents }) {
               {lastEvent.content}
             </p>
             <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
-              {lastEvent.user?.name || 'Sistema'} · {noteDateFormatter.format(lastEvent.createdAt)}
+              {lastEvent.user?.name || 'Sistema'} · {formatShortDateTime(lastEvent.createdAt)}
             </p>
           </div>
         ) : (

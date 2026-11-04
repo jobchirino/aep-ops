@@ -5,27 +5,13 @@ import { ArrowLeft } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getAgents } from '@/lib/users';
+import { formatTimelineDateTime, toZonedDateInputs } from '@/lib/datetime';
 import CaseHeader from './case-header';
 import CaseWorkspace from './case-workspace';
 import NoteComposer from './note-composer';
 import TimelineList from './timeline-list';
 
 export const instant = false;
-
-const timelineDateFormatter = new Intl.DateTimeFormat('es-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-});
-
-function formatTimelineDate(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return timelineDateFormatter.format(date);
-}
 
 function toDateInputValue(value) {
   if (!value) return '';
@@ -64,6 +50,8 @@ export default async function CaseDetailPage({ params }) {
     notFound();
   }
 
+  const followUp = toZonedDateInputs(aepCase.nextFollowUpAt);
+
   const clientData = {
     fullName: aepCase.client?.fullName || '',
     dob: aepCase.client?.dob || '',
@@ -101,7 +89,8 @@ export default async function CaseDetailPage({ params }) {
     radiusStatus: aepCase.radiusStatus || '',
     eligibleHorizonCsnp: Boolean(aepCase.eligibleHorizonCsnp),
     actionRequired: aepCase.actionRequired || '',
-    nextFollowUpDate: toDateInputValue(aepCase.nextFollowUpAt),
+    nextFollowUpDate: followUp.date,
+    nextFollowUpTime: followUp.time,
     twentyOnePoints: aepCase.twentyOnePoints || {},
     thirteenPoints: aepCase.thirteenPoints || {},
     targetCarrier: aepCase.targetCarrier || '',
@@ -125,7 +114,7 @@ export default async function CaseDetailPage({ params }) {
     eventType: event.eventType,
     content: event.content,
     radiusFormattedNote: event.radiusFormattedNote || '',
-    createdAtLabel: formatTimelineDate(event.createdAt),
+    createdAtLabel: formatTimelineDateTime(event.createdAt),
     user: event.user,
   }));
 

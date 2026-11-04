@@ -13,11 +13,11 @@ import {
 } from 'lucide-react';
 import {
   toggleInCallAction,
-  setFollowUpDateAction,
   updateStageAction,
 } from '@/app/actions/caseDetailActions';
 import { CASE_STAGES } from '@/lib/case-stages';
 import AgentSelect from '@/components/agent-select';
+import FollowUpEditor from '@/components/follow-up-editor';
 
 const CATEGORY_STYLES = {
   NO_RENOVABLE: {
@@ -56,7 +56,6 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
   };
 
   const [stage, setOptimisticStage] = useOptimistic(aepCase.stage);
-  const [followUpDate, setOptimisticDate] = useOptimistic(aepCase.nextFollowUpDate || '');
   const [lock, setOptimisticLock] = useOptimistic(serverLock);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -86,25 +85,6 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
       }
 
       flashSuccess('Etapa actualizada');
-    });
-  }
-
-  function handleDateChange(event) {
-    const nextDate = event.target.value;
-
-    setError('');
-
-    startTransition(async () => {
-      setOptimisticDate(nextDate);
-
-      const result = await setFollowUpDateAction(aepCase.id, nextDate);
-
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-
-      flashSuccess(nextDate ? 'Seguimiento guardado' : 'Seguimiento eliminado');
     });
   }
 
@@ -229,22 +209,19 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
                 <span className="inline-flex items-center gap-1">
                   <CalendarClock className="h-3 w-3" />
                   Seguimiento
                 </span>
               </span>
-              <input
-                type="date"
-                aria-label="Fecha de seguimiento"
-                value={followUpDate}
-                onChange={handleDateChange}
-                disabled={pending}
-                className={selectClasses}
+              <FollowUpEditor
+                caseId={aepCase.id}
+                initialDate={aepCase.nextFollowUpDate || ''}
+                initialTime={aepCase.nextFollowUpTime || ''}
               />
-            </label>
+            </div>
 
             {lockedByName && !lockedByMe ? (
               <button

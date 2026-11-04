@@ -1,5 +1,7 @@
 // src/lib/business-rules.js
 
+import { formatRadiusNoteDate } from '@/lib/datetime';
+
 /**
  * 1. Devuelve la estructura de documentos requeridos según la aseguradora.
  * Clover exige 4 documentos; las demás exigen SOA y Enrollment.
@@ -105,8 +107,7 @@ export function generateThirteenPointsText(client, aepCase) {
   const ssn = p13.ssn || client?.ssn || '';
   const medicaid = p13.medicaid || client?.medicaidNumber || '';
   const pcp = p13.pcp || p21.medicoPrimario || '';
-  const providerId = p13.providerId || '';
-  const primaryCareId = p13.primaryCareId || '';
+  const npi = p13.providerId || p13.primaryCareId || '';
   const currentPlan = p13.planActual || aepCase?.currentPlanName || '';
   const strategy = p13.estrategia || aepCase?.targetPlanName || '';
   const effDate = aepCase?.targetEffDate || '01/01/2027';
@@ -124,37 +125,38 @@ export function generateThirteenPointsText(client, aepCase) {
   const trabajoAnterior = p21.tipoTrabajoTenia || p13.trabajoAnterior || '';
   const tuvo401k = p21.programa401k403b || p13.tuvo401k || 'NO';
 
-  return `NAME ${name}
-GENDER ${gender}
-DOB ${dob}
-PHONE ${phone}
-ADDRESS ${fullAddress}
-COUNTY ${county}
-MBI# ${mbi}
-PART A ${partA}
-PART B ${partB}
-LIS ${lis}
-PAAD ${paad}
-SS# ${ssn}
-MEDICAID# ${medicaid}
-PCP ${pcp}${providerId ? `\n       ID del proveedor: ${providerId}` : ''}${primaryCareId ? `\n       Primary Care ID: ${primaryCareId}` : ''}
-PLAN ACTUAL ${currentPlan}
-ESTRATEGIA ${strategy}
-EFF DATE ${effDate}
-CITA ${cita}
-NOTAS ${notas}
-PERIODO DE ENROLAMIENTO ${periodo}
- PENSIONES ¿En qué trabajó?: ${trabajoAnterior}
-¿Tuvo 401K o 403B?: ${tuvo401k}`;
+  const lines = [
+    `NAME ${name}`,
+    `GENDER ${gender}`,
+    `DOB ${dob}`,
+    `PHONE ${phone}`,
+    `ADDRESS ${fullAddress}`,
+    `COUNTY ${county}`,
+    `MBI# ${mbi}`,
+    `PART A ${partA}`,
+    `PART B ${partB}`,
+    `LIS ${lis}`,
+    `PAAD ${paad}`,
+    `SS# ${ssn}`,
+    `MEDICAID# ${medicaid}`,
+    `PCP ${pcp}`,
+    ...(npi ? [`NPI ${npi}`] : []),
+    `PLAN ACTUAL ${currentPlan}`,
+    `ESTRATEGIA ${strategy}`,
+    `EFF DATE ${effDate}`,
+    `CITA ${cita}`,
+    `NOTAS ${notas}`,
+    `PERIODO DE ENROLAMIENTO ${periodo}`,
+    `PENSIONES ¿En qué trabajó?: ${trabajoAnterior}`,
+    `¿Tuvo 401K o 403B?: ${tuvo401k}`,
+  ];
+
+  return lines.map((line) => line.trimEnd()).join('\n').trim();
 }
 
 /**
  * 4. Formatea automáticamente una nota firmada con el usuario en sesión para pegar en RadiusBob
  */
 export function formatRadiusNote(userShortCode, actionText) {
-  const now = new Date();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  const yyyy = now.getFullYear();
-  return `${mm}/${dd}/${yyyy} ${userShortCode}: ${actionText}`;
+  return `${formatRadiusNoteDate()} ${userShortCode}: ${actionText}`;
 }

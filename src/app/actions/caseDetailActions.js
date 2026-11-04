@@ -10,6 +10,7 @@ import {
   calculateValidDocumentDates,
   formatRadiusNote,
 } from '@/lib/business-rules';
+import { fromZonedInputs, toZonedDateInputs } from '@/lib/datetime';
 import { CASE_STAGE_BY_VALUE } from '@/lib/case-stages';
 
 const DOC_KEYS = ['soa', 'enrollment', 'attestation', 'sou'];
@@ -252,7 +253,7 @@ export async function assignCaseAction(caseId, agentId) {
 /**
  * Guarda la fecha de seguimiento como fecha sin hora (12:00 UTC).
  */
-export async function setFollowUpDateAction(caseId, dateValue) {
+export async function setFollowUpDateAction(caseId, dateValue, timeValue) {
   await requireUser();
 
   const aepCase = await findCase(caseId);
@@ -260,19 +261,33 @@ export async function setFollowUpDateAction(caseId, dateValue) {
     return { ok: false, error: 'El caso no existe.' };
   }
 
-  const value = String(dateValue || '').trim();
-  let nextFollowUpAt = null;
+  const date = String(dateValue || '').trim();
+  const time = String(timeValue || '').trim();
 
-  if (value) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      return { ok: false, error: 'La fecha de seguimiento no es válida.' };
+  if (!date) {
+    if (time) {
+      return { ok: false, error: 'Selecciona una fecha para guardar la hora del seguimiento.' };
     }
 
-    nextFollowUpAt = new Date(`${value}T12:00:00.000Z`);
+    try {
+      await prisma.aepCase.update({
+        where: { id: aepCase.id },
+        data: { nextFollowUpAt: null },
+      });
 
-    if (Number.isNaN(nextFollowUpAt.getTime())) {
-      return { ok: false, error: 'La fecha de seguimiento no es válida.' };
+      revalidateCase(aepCase.id);
+
+      return { ok: true, nextFollowUpAt: null, date: '', time: '' };
+    } catch (error) {
+      console.error('[caseDetailActions] Error al limpiar seguimiento:', error);
+      return { ok: false, error: 'No se pudo limpiar el seguimiento.' };
     }
+  }
+
+  const nextFollowUpAt = fromZonedInputs(date, time || '12:00');
+
+  if (!nextFollowUpAt) {
+    return { ok: false, error: 'La fecha u hora de seguimiento no es válida.' };
   }
 
   try {
@@ -283,9 +298,13 @@ export async function setFollowUpDateAction(caseId, dateValue) {
 
     revalidateCase(aepCase.id);
 
+    const zoned = toZonedDateInputs(nextFollowUpAt);
+
     return {
       ok: true,
-      nextFollowUpAt: nextFollowUpAt ? nextFollowUpAt.toISOString() : null,
+      nextFollowUpAt: nextFollowUpAt.toISOString(),
+      date: zoned.date,
+      time: zoned.time,
     };
   } catch (error) {
     console.error('[caseDetailActions] Error al guardar seguimiento:', error);
