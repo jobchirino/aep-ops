@@ -99,7 +99,7 @@ export function generateThirteenPointsText(client, aepCase) {
     p21.direccionZc ||
     [client?.address, client?.city, client?.state, client?.zip].filter(Boolean).join(' ');
   const county = (p13.county || client?.county || '').toUpperCase();
-  const mbi = p13.mbi || client?.mbi || '';
+  const mbi = p13.mbi || p21.mbi || client?.mbi || '';
   const partA = p13.partA || client?.partADate || '';
   const partB = p13.partB || client?.partBDate || '';
   const lis = p13.lis || client?.lis || 'NO';

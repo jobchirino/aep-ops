@@ -191,6 +191,27 @@ export default function TwentyOnePoints({ caseId, initialValues }) {
         </div>
       </div>
 
+      <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-3 dark:border-sky-500/30 dark:bg-sky-500/5">
+        <label
+          htmlFor="point-mbi"
+          className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300"
+        >
+          MBI · Medicare Beneficiary Identifier
+        </label>
+        <input
+          id="point-mbi"
+          type="text"
+          value={values.mbi ?? ''}
+          onChange={(event) => handleChange('mbi', event.target.value)}
+          onBlur={() => persist(values)}
+          placeholder="Ej. 1EG4-TE5-MK73"
+          className={inputClasses}
+        />
+        <p className="mt-1 text-[10px] text-sky-700/70 dark:text-sky-300/70">
+          Si Radius no lo tiene, agrégalo aquí. No cuenta como una de las 21 preguntas.
+        </p>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         {FIELDS.map((field) => (
           <div

@@ -24,6 +24,7 @@ function mergePrefill(prefill, saved) {
 export default function CaseWorkspace({ aepCase, client }) {
   const radiusPrefill = {
     nombreApellido: client.fullName || '',
+    mbi: client.mbi || '',
     dob: client.dob || '',
     direccionZc: [client.address, client.city, client.state, client.zip]
       .filter(Boolean)

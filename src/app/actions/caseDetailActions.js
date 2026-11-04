@@ -17,6 +17,7 @@ const DOC_KEYS = ['soa', 'enrollment', 'attestation', 'sou'];
 
 const TWENTY_ONE_POINT_KEYS = [
   'nombreApellido',
+  'mbi',
   'dob',
   'direccionZc',
   'telefono',
@@ -120,6 +121,8 @@ async function findCase(caseId) {
     where: { id },
     select: {
       id: true,
+      clientId: true,
+      client: { select: { mbi: true } },
       stage: true,
       assignedToId: true,
       assignedTo: { select: { id: true, name: true, shortCode: true } },
@@ -419,10 +422,25 @@ export async function saveTwentyOnePointsAction(caseId, points) {
   const sanitizedPoints = sanitizePoints(points, TWENTY_ONE_POINT_KEYS);
 
   try {
-    await prisma.aepCase.update({
-      where: { id: aepCase.id },
-      data: { twentyOnePoints: sanitizedPoints },
-    });
+    const mbi = String(sanitizedPoints.mbi || '').trim();
+    const updates = [
+      prisma.aepCase.update({
+        where: { id: aepCase.id },
+        data: { twentyOnePoints: sanitizedPoints },
+      }),
+    ];
+
+    // Si el cliente no tiene MBI en Radius, guardamos el capturado en la llamada.
+    if (mbi && !aepCase.client?.mbi) {
+      updates.push(
+        prisma.client.update({
+          where: { id: aepCase.clientId },
+          data: { mbi },
+        })
+      );
+    }
+
+    await prisma.$transaction(updates);
 
     revalidatePath(`/cases/${aepCase.id}`);
 
