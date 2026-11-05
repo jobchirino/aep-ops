@@ -12,6 +12,7 @@ import {
 } from '@/lib/business-rules';
 import { fromZonedInputs, toZonedDateInputs } from '@/lib/datetime';
 import { CASE_STAGE_BY_VALUE } from '@/lib/case-stages';
+import { CASE_CATEGORY_BY_VALUE } from '@/lib/case-categories';
 
 const DOC_KEYS = ['soa', 'enrollment', 'attestation', 'sou'];
 
@@ -123,6 +124,7 @@ async function findCase(caseId) {
       id: true,
       clientId: true,
       client: { select: { mbi: true } },
+      category: true,
       stage: true,
       assignedToId: true,
       assignedTo: { select: { id: true, name: true, shortCode: true } },
@@ -190,6 +192,56 @@ export async function updateStageAction(caseId, nextStage) {
   } catch (error) {
     console.error('[caseDetailActions] Error al cambiar la etapa:', error);
     return { ok: false, error: 'No se pudo cambiar la etapa. Intenta de nuevo.' };
+  }
+}
+
+/**
+ * Cambia la categoría/tipo del caso y deja un evento de auditoría.
+ */
+export async function updateCategoryAction(caseId, nextCategory) {
+  const user = await requireUser();
+  const categoryInfo = CASE_CATEGORY_BY_VALUE[nextCategory];
+
+  if (!categoryInfo) {
+    return { ok: false, error: 'La categoría seleccionada no es válida.' };
+  }
+
+  const aepCase = await findCase(caseId);
+
+  if (!aepCase) {
+    return { ok: false, error: 'El caso no existe.' };
+  }
+
+  if (aepCase.category === nextCategory) {
+    return { ok: true, category: nextCategory, label: categoryInfo.label };
+  }
+
+  const content = `Cambió la categoría a ${categoryInfo.label}`;
+  const radiusFormattedNote = formatRadiusNote(user.shortCode, content);
+
+  try {
+    await prisma.$transaction([
+      prisma.aepCase.update({
+        where: { id: aepCase.id },
+        data: { category: nextCategory },
+      }),
+      prisma.timelineEvent.create({
+        data: {
+          caseId: aepCase.id,
+          userId: user.id,
+          eventType: 'CATEGORY_CHANGE',
+          content,
+          radiusFormattedNote,
+        },
+      }),
+    ]);
+
+    revalidateCase(aepCase.id);
+
+    return { ok: true, category: nextCategory, label: categoryInfo.label };
+  } catch (error) {
+    console.error('[caseDetailActions] Error al cambiar la categoría:', error);
+    return { ok: false, error: 'No se pudo cambiar la categoría del caso.' };
   }
 }
 

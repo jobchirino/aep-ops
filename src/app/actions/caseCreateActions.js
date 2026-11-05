@@ -6,8 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { formatRadiusNote } from '@/lib/business-rules';
-
-const CASE_CATEGORIES = ['ENTRANTE', 'NO_RENOVABLE', 'NO_COMISIONABLE', 'CANCELADO'];
+import { CASE_CATEGORY_BY_VALUE } from '@/lib/case-categories';
 
 function sanitize(value, maxLength = 200) {
   return String(value ?? '').trim().slice(0, maxLength);
@@ -54,7 +53,7 @@ export async function createCaseForClientAction(input) {
 
   const category = sanitize(input?.category, 30) || 'ENTRANTE';
 
-  if (!CASE_CATEGORIES.includes(category)) {
+  if (!CASE_CATEGORY_BY_VALUE[category]) {
     return { ok: false, error: 'La categoría seleccionada no es válida.' };
   }
 

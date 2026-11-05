@@ -2,6 +2,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { normalizePhoneDigits, normalizeSearchName } from '@/lib/search';
+import { GOAL_EXCLUDED_CATEGORY } from '@/lib/case-categories';
 
 const LIST_LIMIT = 300;
 
@@ -61,7 +62,10 @@ export async function getDashboardData({ stage, agent, userId, searchTerm }) {
         COUNT(*) FILTER (WHERE category = 'NO_COMISIONABLE')::int AS "noComisionable",
         COUNT(*) FILTER (WHERE category = 'CANCELADO')::int AS "cancelado",
         COUNT(*) FILTER (WHERE category = 'ENTRANTE')::int AS "entrante",
-        COUNT(*) FILTER (WHERE stage = 'CERRADO_DOCS_ENVIADOS')::int AS "closed"
+        COUNT(*) FILTER (
+          WHERE stage = 'CERRADO_DOCS_ENVIADOS'
+            AND category <> ${GOAL_EXCLUDED_CATEGORY}
+        )::int AS "closed"
       FROM "AepCase"
     `,
     prisma.$queryRaw(Prisma.sql`

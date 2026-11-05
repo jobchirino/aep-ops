@@ -32,6 +32,11 @@ const EVENT_STYLES = {
     className:
       'bg-cyan-50 text-cyan-700 ring-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/30',
   },
+  CATEGORY_CHANGE: {
+    label: 'Categoría',
+    className:
+      'bg-teal-50 text-teal-700 ring-teal-200 dark:bg-teal-500/10 dark:text-teal-300 dark:ring-teal-500/30',
+  },
   DOCS_READY: {
     label: 'Docs listos',
     className:

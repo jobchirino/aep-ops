@@ -6,13 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, LoaderCircle, Plus } from 'lucide-react';
 import { createCaseForClientAction } from '@/app/actions/caseCreateActions';
-
-const CATEGORY_OPTIONS = [
-  { value: 'ENTRANTE', label: 'Entrante / Cambio de plan' },
-  { value: 'NO_RENOVABLE', label: 'No renovable' },
-  { value: 'NO_COMISIONABLE', label: 'No comisionable' },
-  { value: 'CANCELADO', label: 'Cancelado' },
-];
+import { CASE_CATEGORIES } from '@/lib/case-categories';
 
 const inputClasses =
   'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500';
@@ -72,7 +66,7 @@ export default function AddCaseForm({ clientId, clientName, agents, currentUserI
             onChange={(event) => setCategory(event.target.value)}
             className={inputClasses}
           >
-            {CATEGORY_OPTIONS.map((option) => (
+            {CASE_CATEGORIES.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

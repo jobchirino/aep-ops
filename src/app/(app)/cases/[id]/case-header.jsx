@@ -13,9 +13,11 @@ import {
 } from 'lucide-react';
 import {
   toggleInCallAction,
+  updateCategoryAction,
   updateStageAction,
 } from '@/app/actions/caseDetailActions';
 import { CASE_STAGES } from '@/lib/case-stages';
+import { CASE_CATEGORIES } from '@/lib/case-categories';
 import AgentSelect from '@/components/agent-select';
 import FollowUpEditor from '@/components/follow-up-editor';
 
@@ -56,6 +58,7 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
   };
 
   const [stage, setOptimisticStage] = useOptimistic(aepCase.stage);
+  const [categoryValue, setOptimisticCategory] = useOptimistic(aepCase.category);
   const [lock, setOptimisticLock] = useOptimistic(serverLock);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -88,6 +91,25 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
     });
   }
 
+  function handleCategoryChange(event) {
+    const nextCategory = event.target.value;
+
+    setError('');
+
+    startTransition(async () => {
+      setOptimisticCategory(nextCategory);
+
+      const result = await updateCategoryAction(aepCase.id, nextCategory);
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      flashSuccess('Categoría actualizada');
+    });
+  }
+
   function handleLockToggle() {
     if (lockedByName && !lockedByMe) {
       setError(`${lockedByName} está trabajando este caso ahora.`);
@@ -114,7 +136,7 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
     });
   }
 
-  const category = CATEGORY_STYLES[aepCase.category] || CATEGORY_STYLES.CANCELADO;
+  const category = CATEGORY_STYLES[categoryValue] || CATEGORY_STYLES.CANCELADO;
   const address = fullAddress(client);
   const phone = client.phone || client.cell;
 
@@ -179,6 +201,25 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
           </div>
 
           <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                Categoría
+              </span>
+              <select
+                aria-label="Cambiar categoría del caso"
+                value={categoryValue}
+                onChange={handleCategoryChange}
+                disabled={pending}
+                className={selectClasses}
+              >
+                {CASE_CATEGORIES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
                 Agente

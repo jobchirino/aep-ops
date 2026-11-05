@@ -105,6 +105,7 @@ const CATEGORY_CARDS = [
     Icon: PhoneIncoming,
     iconClassName:
       'bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-300',
+    caption: 'No cuentan para la meta',
   },
 ];
 
@@ -178,13 +179,14 @@ export default async function DashboardPage({ searchParams }) {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {CATEGORY_CARDS.map(({ category, label, Icon, iconClassName }) => (
+        {CATEGORY_CARDS.map(({ category, label, Icon, iconClassName, caption }) => (
           <StatCard
             key={category}
             label={label}
             value={countByCategory(category)}
             Icon={Icon}
             iconClassName={iconClassName}
+            caption={caption}
           />
         ))}
       </section>
@@ -305,7 +307,7 @@ function GoalCard({ count, goal, percent }) {
               Meta de Aplicaciones AEP
             </p>
             <p className="mt-0.5 text-[10px] text-emerald-600/80 dark:text-emerald-300/70">
-              Progreso de cierres · Docs enviados
+              Progreso de cierres · No incluye Entrantes
             </p>
           </div>
         </div>
