@@ -51,7 +51,7 @@ Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISI
 - El import es idempotente por `radiusRecordId = LEAD_<Record ID>`. Si se corre dos veces, actualiza el mismo lead y no duplica.
 - Regla de duplicados: se omite un lead **solo si coinciden el nombre normalizado Y el teléfono** con un cliente o lead existente. Si solo coincide el teléfono pero el nombre es distinto, se importa (parejas que comparten número). Si solo coincide el nombre con otro teléfono, también se importa.
 - Los leads sin nombre se omiten; los leads sin teléfono se importan y se reportan para revisión.
-- Se guardan `leadStatus`, `leadTemperature`, `leadTags` y `leadAssignedUser` para mostrarlos en el buscador y en el detalle.
+- Se guardan `leadStatus`, `leadTemperature`, `leadTags` y `leadAssignedUser` para mostrarlos en el buscador. El detalle del caso muestra los badges `Lead` y `Fallecido`.
 - En `Nuevo caso AEP` se buscan clientes y leads. Los leads muestran un badge `Lead` y los fallecidos un badge `Fallecido`. Se pueden agregar al AEP con el mismo formulario.
 - Al crear el caso desde un lead, la nota de la línea de tiempo dice `Lead entrante agregado al AEP desde el directorio de leads` o `Caso creado desde un lead del directorio`.
 
