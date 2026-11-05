@@ -74,6 +74,11 @@ export default async function CaseDetailPage({ params }) {
     paad: aepCase.client?.paad || 'NO',
     radiusUrl: aepCase.client?.radiusUrl || '',
     rawPoliciesJson: aepCase.client?.rawPoliciesJson || [],
+    source: aepCase.client?.source || 'RADIUS',
+    leadStatus: aepCase.client?.leadStatus || '',
+    leadTemperature: aepCase.client?.leadTemperature || '',
+    leadTags: aepCase.client?.leadTags || '',
+    leadAssignedUser: aepCase.client?.leadAssignedUser || '',
   };
 
   const caseData = {

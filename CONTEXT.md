@@ -18,7 +18,7 @@
 > Tatiana **no es usuaria del sistema**: recibe las aplicaciones por un chat externo.
 
 ## 3. Flujo Operativo del Caso (Pipeline AEP)
-Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISIONABLE`, `CANCELADO` o `ENTRANTE`. Los casos `ENTRANTE` son clientes que ya existen en Radius y llaman por su cuenta para un cambio de plan; se agregan desde el buscador de clientes del dashboard. La categoría puede editarse desde la cabecera del detalle del caso; cada cambio se registra como `CATEGORY_CHANGE` firmado. Y pasa por estas etapas (`stage`):
+Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISIONABLE`, `CANCELADO` o `ENTRANTE`. Los casos `ENTRANTE` son clientes que ya existen en Radius o leads importados y llaman por su cuenta para un cambio de plan; se agregan desde el buscador de clientes y leads del dashboard. La categoría puede editarse desde la cabecera del detalle del caso; cada cambio se registra como `CATEGORY_CHANGE` firmado. Y pasa por estas etapas (`stage`):
 1. `SIN_CONTACTAR`: Pendiente de primera llamada.
 2. `EN_SEGUIMIENTO`: No contestó (NC), se dejó SMS/Voicemail, o pidió que lo llamen en otra fecha (`nextFollowUpAt`).
 3. `PUNTOS_COMPLETOS`: Ya se levantaron los 21 puntos en llamada y se generaron los 13 puntos.
@@ -36,12 +36,24 @@ Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISI
 ### 4.1 Asignación de casos
 - Cualquier agente puede cambiar el agente asignado desde la cabecera del detalle o desde el select de la columna "Agente" del dashboard.
 - Cada cambio registra un `TimelineEvent` de tipo `ASSIGNMENT` firmado por el usuario en sesión.
-- El cliente debe existir previamente en Radius; un cliente solo puede tener un caso AEP. Si ya tiene uno, se abre el existente.
+- El cliente debe existir previamente en Radius o ser un lead importado; un cliente o lead solo puede tener un caso AEP. Si ya tiene uno, se abre el existente.
 
 ### 4.2 Meta de 50 aplicaciones AEP
 - Solo cuentan los casos en `CERRADO_DOCS_ENVIADOS` que **no** sean de categoría `ENTRANTE` (Entrante / Cambio de plan).
 - Los casos `ENTRANTE` cerrados no incrementan la meta.
 - Si se cambia la categoría de un caso cerrado, la meta se ajusta automáticamente.
+
+### 4.3 Leads
+- Los leads viven en la tabla `Client` con `source = 'LEAD'`; los clientes de Radius tienen `source = 'RADIUS'`.
+- Se importan desde `data/leads_26_11_05.csv` con:
+  1. `node prisma/import-leads.mjs --dry-run` (revisión, no escribe).
+  2. `node prisma/import-leads.mjs` (importación real).
+- El import es idempotente por `radiusRecordId = LEAD_<Record ID>`. Si se corre dos veces, actualiza el mismo lead y no duplica.
+- Regla de duplicados: se omite un lead **solo si coinciden el nombre normalizado Y el teléfono** con un cliente o lead existente. Si solo coincide el teléfono pero el nombre es distinto, se importa (parejas que comparten número). Si solo coincide el nombre con otro teléfono, también se importa.
+- Los leads sin nombre se omiten; los leads sin teléfono se importan y se reportan para revisión.
+- Se guardan `leadStatus`, `leadTemperature`, `leadTags` y `leadAssignedUser` para mostrarlos en el buscador y en el detalle.
+- En `Nuevo caso AEP` se buscan clientes y leads. Los leads muestran un badge `Lead` y los fallecidos un badge `Fallecido`. Se pueden agregar al AEP con el mismo formulario.
+- Al crear el caso desde un lead, la nota de la línea de tiempo dice `Lead entrante agregado al AEP desde el directorio de leads` o `Caso creado desde un lead del directorio`.
 
 ## 5. Reglas de Negocio Críticas
 ### A. De 21 Puntos a 13 Puntos

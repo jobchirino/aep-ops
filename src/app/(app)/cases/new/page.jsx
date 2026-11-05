@@ -28,10 +28,11 @@ export default async function NewCasePage({ searchParams }) {
   const searchTerm =
     typeof queryParam === 'string' ? queryParam.trim().slice(0, 80) : '';
 
-  const [clients, agents, totalClients] = await Promise.all([
+  const [clients, agents, radiusCount, leadCount] = await Promise.all([
     searchClientsForNewCase(searchTerm),
     getAgents(),
-    prisma.client.count(),
+    prisma.client.count({ where: { source: 'RADIUS' } }),
+    prisma.client.count({ where: { source: 'LEAD' } }),
   ]);
 
   return (
@@ -49,12 +50,12 @@ export default async function NewCasePage({ searchParams }) {
           Nuevo caso AEP
         </p>
         <h1 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Agregar un cliente de Radius al AEP
+          Agregar un cliente o lead al AEP
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Busca por nombre o teléfono entre los {totalClients.toLocaleString('es-US')} clientes
-          cargados de Radius. Solo se pueden agregar clientes existentes; si ya tiene un caso, se
-          muestra el enlace al caso actual.
+          Busca por nombre o teléfono entre los {radiusCount.toLocaleString('es-US')} clientes de
+          Radius y {leadCount.toLocaleString('es-US')} leads cargados. Solo se pueden agregar
+          clientes o leads existentes; si ya tiene un caso, se muestra el enlace al caso actual.
         </p>
 
         <div className="mt-4">
@@ -71,21 +72,22 @@ export default async function NewCasePage({ searchParams }) {
         <section className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center dark:border-zinc-700 dark:bg-zinc-950/40">
           <Users className="mx-auto h-8 w-8 text-zinc-300 dark:text-zinc-600" />
           <p className="mt-2 text-sm font-medium text-zinc-600 dark:text-zinc-300">
-            Busca al cliente que llamó
+            Busca al cliente o lead que llamó
           </p>
           <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-            Los {totalClients.toLocaleString('es-US')} clientes de Radius ya están en la base.
+            Los {radiusCount.toLocaleString('es-US')} clientes de Radius y{' '}
+            {leadCount.toLocaleString('es-US')} leads ya están en la base.
           </p>
         </section>
       ) : clients.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center dark:border-zinc-700 dark:bg-zinc-950/40">
           <UserRound className="mx-auto h-8 w-8 text-zinc-300 dark:text-zinc-600" />
           <p className="mt-2 text-sm font-medium text-zinc-600 dark:text-zinc-300">
-            No encontramos ese cliente en Radius
+            No encontramos ese cliente o lead
           </p>
           <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-            Verifica el nombre o el teléfono. En esta fase solo se agregan clientes existentes de
-            Radius.
+            Verifica el nombre o el teléfono. En esta fase solo se agregan clientes de Radius y
+            leads existentes.
           </p>
         </section>
       ) : (
@@ -106,6 +108,20 @@ export default async function NewCasePage({ searchParams }) {
                 ? CASE_STAGE_BY_VALUE[existingCase.stage]?.label || existingCase.stage
                 : '';
               const phone = client.phone || client.cell || 'Sin teléfono';
+              const isLead = client.source === 'LEAD';
+              const isDeceasedLead =
+                isLead &&
+                /passed away|fallecido/i.test(
+                  `${client.leadStatus || ''} ${client.leadTags || ''}`
+                );
+              const hasLeadMeta =
+                isLead &&
+                Boolean(
+                  client.leadStatus ||
+                    client.leadTemperature ||
+                    client.leadAssignedUser ||
+                    client.leadTags
+                );
 
               return (
                 <article
@@ -114,14 +130,38 @@ export default async function NewCasePage({ searchParams }) {
                 >
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                        {client.fullName}
-                      </h3>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <h3 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                          {client.fullName}
+                        </h3>
+                        {isLead ? (
+                          <span className="inline-flex shrink-0 items-center rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/30">
+                            Lead
+                          </span>
+                        ) : null}
+                        {isDeceasedLead ? (
+                          <span className="inline-flex shrink-0 items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/30">
+                            Fallecido
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
                         {client.state || 'Sin estado'} · {phone}
                         {client.dob ? ` · DOB ${client.dob}` : ''}
                         {client.mbi ? ` · MBI ${client.mbi}` : ''}
                       </p>
+                      {hasLeadMeta ? (
+                        <p className="mt-1 line-clamp-2 text-[10px] text-zinc-400 dark:text-zinc-500">
+                          {[
+                            client.leadStatus,
+                            client.leadTemperature,
+                            client.leadAssignedUser,
+                            client.leadTags,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      ) : null}
                     </div>
 
                     {existingCase ? (

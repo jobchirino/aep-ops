@@ -49,6 +49,11 @@ model Client {
   paad            String?  @default("NO")
   radiusUrl       String?
   rawPoliciesJson Json?    // Historial de hasta 6 pólizas exportadas de Radius
+  source           String   @default("RADIUS") // RADIUS | LEAD
+  leadStatus       String?
+  leadTemperature  String?
+  leadTags         String?
+  leadAssignedUser String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -58,6 +63,7 @@ model Client {
   @@index([phoneNormalized])
   @@index([cellNormalized])
   @@index([state])
+  @@index([source])
 }
 
 model AepCase {

@@ -13,8 +13,8 @@ function sanitize(value, maxLength = 200) {
 }
 
 /**
- * Agrega al AEP un cliente que ya existe en Radius.
- * Bloquea duplicados: un cliente solo puede tener un caso.
+ * Agrega al AEP un cliente de Radius o un lead ya importado.
+ * Bloquea duplicados: un cliente o lead solo puede tener un caso.
  */
 export async function createCaseForClientAction(input) {
   const user = await getCurrentUser();
@@ -31,11 +31,11 @@ export async function createCaseForClientAction(input) {
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { id: true, fullName: true },
+    select: { id: true, fullName: true, source: true },
   });
 
   if (!client) {
-    return { ok: false, error: 'El cliente no existe en Radius.' };
+    return { ok: false, error: 'El cliente o lead no existe.' };
   }
 
   const existingCase = await prisma.aepCase.findFirst({
@@ -46,7 +46,7 @@ export async function createCaseForClientAction(input) {
   if (existingCase) {
     return {
       ok: false,
-      error: 'Este cliente ya tiene un caso AEP.',
+      error: 'Este cliente o lead ya tiene un caso AEP.',
       existingCaseId: existingCase.id,
     };
   }
@@ -95,8 +95,13 @@ export async function createCaseForClientAction(input) {
       select: { id: true },
     });
 
-    const content =
-      category === 'ENTRANTE'
+    const isLead = client.source === 'LEAD';
+
+    const content = isLead
+      ? category === 'ENTRANTE'
+        ? 'Lead entrante agregado al AEP desde el directorio de leads'
+        : 'Caso creado desde un lead del directorio'
+      : category === 'ENTRANTE'
         ? 'Cliente entrante agregado al AEP desde el directorio de clientes'
         : 'Caso creado desde el directorio de clientes';
 

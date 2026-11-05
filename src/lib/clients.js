@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { normalizePhoneDigits, normalizeSearchName } from '@/lib/search';
 
 /**
- * Busca clientes de Radius por nombre o teléfono para agregarlos al AEP.
+ * Busca clientes de Radius y leads por nombre o teléfono para agregarlos al AEP.
  */
 export async function searchClientsForNewCase(query) {
   const search = String(query || '').trim().slice(0, 80);
@@ -41,6 +41,11 @@ export async function searchClientsForNewCase(query) {
       cell: true,
       dob: true,
       mbi: true,
+      source: true,
+      leadStatus: true,
+      leadTemperature: true,
+      leadTags: true,
+      leadAssignedUser: true,
       aepCases: {
         take: 5,
         orderBy: { createdAt: 'desc' },

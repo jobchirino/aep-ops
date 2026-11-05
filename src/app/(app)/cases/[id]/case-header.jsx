@@ -139,6 +139,10 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
   const category = CATEGORY_STYLES[categoryValue] || CATEGORY_STYLES.CANCELADO;
   const address = fullAddress(client);
   const phone = client.phone || client.cell;
+  const isLead = client.source === 'LEAD';
+  const isDeceasedLead =
+    isLead &&
+    /passed away|fallecido/i.test(`${client.leadStatus || ''} ${client.leadTags || ''}`);
 
   const selectableStages = CASE_STAGES.filter(
     (stageOption) =>
@@ -171,6 +175,16 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
               >
                 {category.label}
               </span>
+              {isLead ? (
+                <span className="inline-flex items-center rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/30">
+                  Lead
+                </span>
+              ) : null}
+              {isDeceasedLead ? (
+                <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/30">
+                  Fallecido
+                </span>
+              ) : null}
               {aepCase.eligibleHorizonCsnp ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700 ring-1 ring-inset ring-orange-200 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30">
                   <AlertTriangle className="h-3 w-3" />
