@@ -121,9 +121,11 @@ async function PendingTodayBadge({ user }) {
   const hasAny = overdue > 0 || today > 0;
 
   return (
-    <div
+    <Link
+      href="/pendientes"
+      aria-label="Ver pendientes"
       title="Vencidos: ya pasó su hora. Hoy: aún quedan por atender hoy. Horario de New Jersey (ET). Incluye tus casos asignados + los que no tienen agente."
-      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium ring-1 ring-inset ${
+      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium ring-1 ring-inset transition hover:brightness-95 ${
         hasError
           ? 'bg-zinc-100 text-zinc-500 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700'
           : hasAny
@@ -155,7 +157,7 @@ async function PendingTodayBadge({ user }) {
           </span>
         </>
       )}
-    </div>
+    </Link>
   );
 }
 

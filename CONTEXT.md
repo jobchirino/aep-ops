@@ -55,6 +55,14 @@ Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISI
 - En `Nuevo caso AEP` se buscan clientes y leads. Los leads muestran un badge `Lead` y los fallecidos un badge `Fallecido`. Se pueden agregar al AEP con el mismo formulario.
 - Al crear el caso desde un lead, la nota de la línea de tiempo dice `Lead entrante agregado al AEP desde el directorio de leads` o `Caso creado desde un lead del directorio`.
 
+### 4.4 Pendientes
+- La ruta `/pendientes` muestra los casos no cerrados con `nextFollowUpAt`, asignados al usuario en sesión o sin agente.
+- Se agrupan en **Vencidos**, **Hoy** y **Próximos**, usando la hora de New Jersey (ET).
+- El botón **Hecho** limpia `nextFollowUpAt` y registra un evento firmado en la línea de tiempo. No cambia la etapa.
+- Si no se marca Hecho, el caso permanece pendiente.
+- Al cerrar el caso o pasarlo a `DESCARTADO`, el seguimiento se limpia automáticamente.
+- El badge del header enlaza a `/pendientes`.
+
 ## 5. Reglas de Negocio Críticas
 ### A. De 21 Puntos a 13 Puntos
 - El formulario de **21 Puntos** guarda las respuestas de la llamada en JSON.
@@ -80,11 +88,14 @@ Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISI
 - Solo cuando todos los documentos requeridos estén marcados en `true`, se habilita el botón **"✅ Marcar Docs Listos y Cerrar Caso"**.
 - El cierre es definitivo: cambia `stage` a `CERRADO_DOCS_ENVIADOS`, guarda `docsChecklist`, `docsReady`, `soaDate`, `enrollmentDate`, `targetCarrier`, `targetPlanName` y `sentAt`, registra el evento `DOCS_READY` firmado por el agente y redirige al dashboard.
 
-### D. Calculadora Automática de Fechas para Documentos
+### D. Fechas de Documentos
 1. **Regla de las 48 horas:** La `soaDate` SIEMPRE debe ser **2 días antes (48 horas)** de la `enrollmentDate`.
-2. **Regla de Compañía y Estado:**
+2. **Enrollment manual:** El agente puede escribir la `enrollmentDate`; la `soaDate` se calcula automáticamente 2 días antes. Esto permite cerrar hoy un caso con fecha de Enrollment anterior.
+3. **Generar ambas:** El botón `⚡ Generar ambas` mantiene el cálculo automático según las reglas de compañía y estado.
+4. **Regla de Compañía y Estado:**
    - Clientes con la **misma compañía (`targetCarrier`) y el mismo estado (`state`)** PUEDEN tener la misma `enrollmentDate`.
-   - Clientes con la **misma compañía (`targetCarrier`) pero en DIFERENTE estado (`state`)** DEBEN tener una `enrollmentDate` de **un día después (+1 día)** respecto al último cliente registrado de esa misma compañía en otro estado.
+   - Clientes con la **misma compañía (`targetCarrier`) pero en DIFERENTE estado (`state`)** DEBEN tener una `enrollmentDate` de **un día después (+1 día)** respecto al último cliente registrado de esa misma compañía en otro estado. La fecha manual también respeta esta regla.
+5. **sentAt:** La fecha de envío a Tatiana se puede escribir manualmente; si se deja vacía, se usa la fecha del día del cierre.
 
 > Al cerrar el caso, el evento firmado dice: `"Documentos completados y enviados a Tatiana por chat"`. Tatiana recibe el paquete por chat externo; el sistema no tiene bandeja de salida ni usuario Tatiana.
 

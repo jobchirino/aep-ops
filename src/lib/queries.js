@@ -44,3 +44,48 @@ export async function getPendingTodayCount(user) {
     return null;
   }
 }
+
+/**
+ * Lista de seguimientos pendientes del usuario en sesión:
+ * casos no cerrados, con próxima fecha y asignados a él o sin agente.
+ */
+export async function getPendingCases(user) {
+  if (!user?.id) {
+    return [];
+  }
+
+  try {
+    return await prisma.aepCase.findMany({
+      where: {
+        stage: { notIn: CLOSED_STAGES },
+        nextFollowUpAt: { not: null },
+        OR: [{ assignedToId: user.id }, { assignedToId: null }],
+      },
+      orderBy: { nextFollowUpAt: 'asc' },
+      take: 300,
+      select: {
+        id: true,
+        stage: true,
+        category: true,
+        nextFollowUpAt: true,
+        currentPlanName: true,
+        currentCarrier: true,
+        assignedTo: {
+          select: { id: true, name: true, shortCode: true },
+        },
+        client: {
+          select: {
+            fullName: true,
+            state: true,
+            phone: true,
+            cell: true,
+            radiusUrl: true,
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('[queries] No se pudieron cargar los pendientes:', error);
+    return [];
+  }
+}

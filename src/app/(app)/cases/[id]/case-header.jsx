@@ -266,9 +266,12 @@ export default function CaseHeader({ aepCase, client, currentUser, agents }) {
 
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
                   <CalendarClock className="h-3 w-3" />
                   Seguimiento
+                  <span className="text-[8px] font-normal normal-case tracking-normal text-zinc-400/90 dark:text-zinc-500">
+                    Hora New Jersey (ET)
+                  </span>
                 </span>
               </span>
               <FollowUpEditor

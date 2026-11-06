@@ -15,6 +15,7 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import { getDashboardData } from '@/lib/dashboard';
 import { getAgents } from '@/lib/users';
+import { CLOSED_STAGES } from '@/lib/case-stages';
 import {
   formatFollowUpDateTime,
   formatShortDateTime,
@@ -361,7 +362,9 @@ function CaseRow({ aepCase, agents, now, endOfToday }) {
   const client = aepCase.client;
   const lastEvent = aepCase.timeline?.[0];
   const phone = client?.phone || client?.cell || null;
-  const followUp = aepCase.nextFollowUpAt ? new Date(aepCase.nextFollowUpAt) : null;
+  const isClosed = CLOSED_STAGES.includes(aepCase.stage);
+  const followUp =
+    !isClosed && aepCase.nextFollowUpAt ? new Date(aepCase.nextFollowUpAt) : null;
   const followUpStatus = followUp
     ? followUp < now
       ? 'overdue'
@@ -393,13 +396,15 @@ function CaseRow({ aepCase, agents, now, endOfToday }) {
         </p>
         <p className={`mt-0.5 flex items-center gap-1 text-[11px] font-medium ${followUpClassName}`}>
           <CalendarClock className="h-3 w-3 shrink-0" />
-          {followUp
-            ? followUpStatus === 'overdue'
-              ? `Vencido · ${followUpLabel}`
-              : followUpStatus === 'today'
-                ? `Hoy · ${followUpLabel}`
-                : `Seguimiento · ${followUpLabel}`
-            : 'Sin seguimiento'}
+          {isClosed
+            ? 'Caso cerrado'
+            : followUp
+              ? followUpStatus === 'overdue'
+                ? `Vencido · ${followUpLabel}`
+                : followUpStatus === 'today'
+                  ? `Hoy · ${followUpLabel}`
+                  : `Seguimiento · ${followUpLabel}`
+              : 'Sin seguimiento'}
         </p>
         {aepCase.lockedByUser ? (
           <span className="mt-1 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30">

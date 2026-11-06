@@ -37,7 +37,7 @@ export default function FollowUpEditor({ caseId, initialDate, initialTime }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+    <form onSubmit={handleSubmit} className="relative">
       <div className="flex items-center gap-1">
         <input
           type="date"
@@ -69,10 +69,10 @@ export default function FollowUpEditor({ caseId, initialDate, initialTime }) {
         </button>
       </div>
 
-      <span className="text-[9px] text-zinc-400 dark:text-zinc-500">Hora New Jersey (ET)</span>
-
       {error ? (
-        <span className="text-[9px] font-medium text-red-600 dark:text-red-400">{error}</span>
+        <span className="absolute left-0 top-full mt-1 whitespace-nowrap text-[9px] font-medium text-red-600 dark:text-red-400">
+          {error}
+        </span>
       ) : null}
     </form>
   );

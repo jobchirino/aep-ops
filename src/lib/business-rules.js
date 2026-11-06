@@ -84,6 +84,77 @@ export function calculateValidDocumentDates({ targetCarrier, clientState, existi
 }
 
 /**
+ * Valida una fecha de Enrollment ingresada manualmente.
+ * Mantiene la regla de +1 día cuando la misma aseguradora ya tiene
+ * un caso en otro estado y no existe todavía un caso en el estado actual.
+ */
+export function validateManualEnrollmentDate({
+  targetCarrier,
+  clientState,
+  enrollmentDate,
+  existingCasesForCarrier = [],
+}) {
+  const carrier = String(targetCarrier || '').trim();
+  const state = String(clientState || '').trim().toUpperCase();
+
+  if (!carrier) {
+    return { ok: false, error: 'Confirma la aseguradora antes de validar la fecha.' };
+  }
+
+  if (!state) {
+    return { ok: false, error: 'El cliente no tiene estado registrado.' };
+  }
+
+  if (!enrollmentDate || Number.isNaN(new Date(enrollmentDate).getTime())) {
+    return { ok: false, error: 'La fecha de Enrollment no es válida.' };
+  }
+
+  const carrierUpper = carrier.toUpperCase();
+  const validExisting = existingCasesForCarrier.filter(
+    (item) =>
+      item.enrollmentDate &&
+      String(item.targetCarrier || '').trim().toUpperCase() === carrierUpper
+  );
+
+  const hasSameState = validExisting.some(
+    (item) => String(item.client?.state || '').trim().toUpperCase() === state
+  );
+
+  if (hasSameState) {
+    return { ok: true };
+  }
+
+  const otherStateCases = validExisting.filter(
+    (item) => String(item.client?.state || '').trim().toUpperCase() !== state
+  );
+
+  if (otherStateCases.length === 0) {
+    return { ok: true };
+  }
+
+  const latest = otherStateCases.reduce((current, item) => {
+    const date = new Date(item.enrollmentDate);
+    return date > current ? date : current;
+  }, new Date(0));
+
+  const minimum = new Date(latest);
+  minimum.setUTCDate(minimum.getUTCDate() + 1);
+
+  if (new Date(enrollmentDate).getTime() < minimum.getTime()) {
+    const minimumLabel = `${String(minimum.getUTCMonth() + 1).padStart(2, '0')}/${String(
+      minimum.getUTCDate()
+    ).padStart(2, '0')}/${minimum.getUTCFullYear()}`;
+
+    return {
+      ok: false,
+      error: `Para ${carrier} en ${state}, la fecha mínima de Enrollment es ${minimumLabel} porque ya hay un caso de esa aseguradora en otro estado.`,
+    };
+  }
+
+  return { ok: true };
+}
+
+/**
  * 3. Genera el bloque de texto exacto de los 13 Puntos combinando Radius + 21 Puntos + Estrategia
  */
 export function generateThirteenPointsText(client, aepCase) {

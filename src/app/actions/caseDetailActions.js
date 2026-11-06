@@ -9,9 +9,10 @@ import {
   areAllRequiredDocsChecked,
   calculateValidDocumentDates,
   formatRadiusNote,
+  validateManualEnrollmentDate,
 } from '@/lib/business-rules';
 import { fromZonedInputs, toZonedDateInputs } from '@/lib/datetime';
-import { CASE_STAGE_BY_VALUE } from '@/lib/case-stages';
+import { CASE_STAGE_BY_VALUE, CLOSED_STAGES } from '@/lib/case-stages';
 import { CASE_CATEGORY_BY_VALUE } from '@/lib/case-categories';
 
 const DOC_KEYS = ['soa', 'enrollment', 'attestation', 'sou'];
@@ -173,7 +174,10 @@ export async function updateStageAction(caseId, nextStage) {
     await prisma.$transaction([
       prisma.aepCase.update({
         where: { id: aepCase.id },
-        data: { stage: nextStage },
+        data: {
+          stage: nextStage,
+          ...(CLOSED_STAGES.includes(nextStage) ? { nextFollowUpAt: null } : {}),
+        },
       }),
       prisma.timelineEvent.create({
         data: {
@@ -1008,7 +1012,10 @@ export async function closeCaseAction(caseId, payload) {
   );
 
   if (!soaDate || !enrollmentDate) {
-    return { ok: false, error: 'Calcula las fechas de SOA y Enrollment antes de cerrar.' };
+    return {
+      ok: false,
+      error: 'Ingresa el Enrollment Date o genera ambas fechas antes de cerrar.',
+    };
   }
 
   if (dayNumber(enrollmentDate) - dayNumber(soaDate) !== 2) {
@@ -1018,24 +1025,35 @@ export async function closeCaseAction(caseId, payload) {
     };
   }
 
-  const computed = await computeDocumentDates({
-    caseId: aepCase.id,
-    targetCarrier,
-    clientState,
+  const existingCasesForCarrier = await prisma.aepCase.findMany({
+    where: {
+      id: { not: aepCase.id },
+      enrollmentDate: { not: null },
+      targetCarrier: { equals: targetCarrier, mode: 'insensitive' },
+    },
+    select: {
+      enrollmentDate: true,
+      targetCarrier: true,
+      client: { select: { state: true } },
+    },
   });
 
-  if (!computed.ok) {
-    return computed;
+  const manualValidation = validateManualEnrollmentDate({
+    targetCarrier,
+    clientState,
+    enrollmentDate,
+    existingCasesForCarrier,
+  });
+
+  if (!manualValidation.ok) {
+    return manualValidation;
   }
 
-  if (
-    toDateOnly(computed.soaDate) !== toDateOnly(soaDate) ||
-    toDateOnly(computed.enrollmentDate) !== toDateOnly(enrollmentDate)
-  ) {
-    return {
-      ok: false,
-      error: 'Las fechas cambiaron. Vuelve a calcular antes de cerrar el caso.',
-    };
+  const sentAtInput = String(payload?.sentAt || '').trim();
+  const sentAt = sentAtInput ? parseDateOnly(sentAtInput) : new Date();
+
+  if (!sentAt) {
+    return { ok: false, error: 'La fecha de envío no es válida.' };
   }
 
   const content = 'Documentos completados y enviados a Tatiana por chat';
@@ -1053,8 +1071,9 @@ export async function closeCaseAction(caseId, payload) {
           docsReady: true,
           soaDate,
           enrollmentDate,
+          nextFollowUpAt: null,
           sentByTatiana: true,
-          sentAt: new Date(),
+          sentAt,
         },
       }),
       prisma.timelineEvent.create({

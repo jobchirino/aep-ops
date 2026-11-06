@@ -29,6 +29,7 @@ const REASONS = {
   first: 'Primera aplicación para esta aseguradora: se usa la fecha base.',
   same_state: 'Mismo estado y aseguradora: se reutiliza la fecha de enrollment más reciente.',
   other_state: 'Aseguradora en otro estado: se aplica +1 día sobre el último registro.',
+  manual: 'Fecha de Enrollment ingresada manualmente; el SOA se calculó 2 días antes.',
 };
 
 function formatDateOnly(value) {
@@ -42,6 +43,23 @@ function formatDateOnly(value) {
   return `${month}/${day}/${year}`;
 }
 
+function shiftDateInput(value, days) {
+  const text = String(value || '').trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return '';
+  }
+
+  const [year, month, day] = text.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
 export default function CloseCase({
   caseId,
   aepCase,
@@ -52,6 +70,7 @@ export default function CloseCase({
   const [checklist, setChecklist] = useState(aepCase.docsChecklist || {});
   const [soaDate, setSoaDate] = useState(aepCase.soaDate || '');
   const [enrollmentDate, setEnrollmentDate] = useState(aepCase.enrollmentDate || '');
+  const [sentAt, setSentAt] = useState(aepCase.sentAt || '');
   const [datesReason, setDatesReason] = useState('');
   const [datesCarrier, setDatesCarrier] = useState(aepCase.targetCarrier || '');
   const [savingPlan, setSavingPlan] = useState(false);
@@ -151,6 +170,16 @@ export default function CloseCase({
     setDatesCarrier(targetCarrier.trim());
   }
 
+  function handleEnrollmentChange(event) {
+    const value = event.target.value;
+
+    setEnrollmentDate(value);
+    setSoaDate(value ? shiftDateInput(value, -2) : '');
+    setDatesReason(value ? 'manual' : '');
+    setDatesCarrier(targetCarrier.trim());
+    setError('');
+  }
+
   async function handleClose() {
     if (!canClose) return;
 
@@ -163,6 +192,7 @@ export default function CloseCase({
       checklist,
       soaDate,
       enrollmentDate,
+      sentAt,
     });
 
     setClosing(false);
@@ -177,9 +207,9 @@ export default function CloseCase({
     : !allChecked
       ? `Marca los ${requiredItems.length} documentos requeridos.`
       : !hasDates
-        ? 'Calcula las fechas de SOA y Enrollment.'
+        ? 'Ingresa el Enrollment Date o genera ambas fechas.'
         : datesStale
-          ? 'La aseguradora cambió: vuelve a calcular las fechas.'
+          ? 'La aseguradora cambió: vuelve a generar o ingresar las fechas.'
           : '';
 
   return (
@@ -330,7 +360,8 @@ export default function CloseCase({
               Fechas de documentos
             </p>
             <p className="mt-0.5 text-[10px] text-indigo-600/80 dark:text-indigo-300/70">
-              Regla: SOA siempre 2 días (48 h) antes del Enrollment.
+              Regla: SOA siempre 2 días (48 h) antes del Enrollment. También puedes escribir el
+              Enrollment Date y el SOA se calcula solo.
             </p>
           </div>
 
@@ -345,7 +376,7 @@ export default function CloseCase({
             ) : (
               <Zap className="h-3.5 w-3.5" />
             )}
-            ⚡ Calcular Fechas (48h/Estados)
+            ⚡ Generar ambas
           </button>
         </div>
 
@@ -359,13 +390,44 @@ export default function CloseCase({
             </p>
           </div>
           <div className="rounded-xl border border-indigo-200 bg-white px-3 py-2 dark:border-indigo-500/30 dark:bg-zinc-900">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+            <label
+              htmlFor="enrollment-date"
+              className="block text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500"
+            >
               Enrollment Date
-            </p>
-            <p className="mt-0.5 text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-              {formatDateOnly(enrollmentDate)}
-            </p>
+            </label>
+            <input
+              id="enrollment-date"
+              type="date"
+              value={enrollmentDate}
+              onChange={handleEnrollmentChange}
+              disabled={isClosed}
+              className="mt-0.5 w-full rounded-lg border border-indigo-200 bg-white px-2 py-1.5 text-sm font-semibold tabular-nums text-zinc-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-indigo-500/30 dark:bg-zinc-900 dark:text-zinc-50"
+            />
           </div>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-indigo-200 bg-white px-3 py-2 dark:border-indigo-500/30 dark:bg-zinc-900">
+          <label
+            htmlFor="sent-at"
+            className="block text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500"
+          >
+            Fecha de envío a Tatiana (sentAt)
+          </label>
+          <input
+            id="sent-at"
+            type="date"
+            value={sentAt}
+            onChange={(event) => {
+              setSentAt(event.target.value);
+              if (error) setError('');
+            }}
+            disabled={isClosed}
+            className="mt-0.5 w-full rounded-lg border border-indigo-200 bg-white px-2 py-1.5 text-sm font-semibold tabular-nums text-zinc-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-indigo-500/30 dark:bg-zinc-900 dark:text-zinc-50"
+          />
+          <p className="mt-1 text-[10px] text-indigo-600/80 dark:text-indigo-300/70">
+            Opcional. Si se deja vacía, se usa la fecha de hoy.
+          </p>
         </div>
 
         {datesReason ? (
@@ -377,7 +439,7 @@ export default function CloseCase({
         {datesStale ? (
           <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
             <AlertTriangle className="h-3 w-3" />
-            La aseguradora cambió. Vuelve a calcular las fechas.
+            La aseguradora cambió. Vuelve a generar o ingresar las fechas.
           </p>
         ) : null}
 

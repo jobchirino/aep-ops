@@ -109,6 +109,7 @@ export default async function CaseDetailPage({ params }) {
     docsReady: Boolean(aepCase.docsReady),
     soaDate: toDateInputValue(aepCase.soaDate),
     enrollmentDate: toDateInputValue(aepCase.enrollmentDate),
+    sentAt: aepCase.sentAt ? toZonedDateInputs(aepCase.sentAt).date : '',
     assignedTo: aepCase.assignedTo,
     lockedByUser: aepCase.lockedByUser,
     lockedAt: aepCase.lockedAt ? aepCase.lockedAt.toISOString() : null,
