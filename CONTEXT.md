@@ -74,7 +74,8 @@ Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISI
 
 ### B. Validador de Planes No Comisionables
 - Antes de confirmar el campo `ESTRATEGIA` (Plan Nuevo), el agente puede buscar por `Plan ID` (ej. `H5521-419`) o nombre y Estado en la tabla `NonCommissionablePlan`.
-- Si el plan aparece en la lista de no comisionables para ese Estado/Año, mostrar alerta roja: `"⚠️ CUIDADO: Este plan figura como NO COMISIONABLE"`.
+- El validador consulta **solo el catálogo 2027**. Los registros 2025/2026 se conservan como histórico y no generan alertas.
+- Si el plan aparece en la lista de no comisionables 2027 para ese Estado, mostrar alerta roja: `"⚠️ CUIDADO: Este plan figura como NO COMISIONABLE"`.
 
 ### C. Checklist Dinámico de Documentos por Aseguradora
 - Si `targetCarrier` es **Clover** (case-insensitive), se requieren **4 documentos obligatorios**:

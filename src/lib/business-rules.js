@@ -2,6 +2,10 @@
 
 import { formatRadiusNoteDate } from '@/lib/datetime';
 
+// Año oficial del catálogo de planes no comisionables que valida la aplicación.
+// Los registros de años anteriores se conservan solo como histórico.
+export const NON_COMMISSIONABLE_PLAN_YEAR = 2027;
+
 /**
  * 1. Devuelve la estructura de documentos requeridos según la aseguradora.
  * Clover exige 4 documentos; las demás exigen SOA y Enrollment.

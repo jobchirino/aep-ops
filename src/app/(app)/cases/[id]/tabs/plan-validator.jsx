@@ -10,13 +10,10 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { searchNonCommissionablePlanAction } from '@/app/actions/caseDetailActions';
+import { NON_COMMISSIONABLE_PLAN_YEAR } from '@/lib/business-rules';
 
 const inputClasses =
   'w-full rounded-xl border border-zinc-300 bg-white py-2.5 pl-9 pr-3 text-sm text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500';
-
-function uniqueYears(matches) {
-  return [...new Set(matches.map((match) => match.year))].sort((a, b) => b - a);
-}
 
 export default function PlanValidator({ initialQuery, clientState, targetPlanName }) {
   const [query, setQuery] = useState(initialQuery || '');
@@ -57,7 +54,6 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
   }
 
   const stateLabel = clientState || 'sin estado registrado';
-  const years = result?.hasStateMatch ? uniqueYears(result.stateMatches) : [];
 
   return (
     <div className="space-y-4">
@@ -66,8 +62,9 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
           Validador de planes no comisionables
         </h2>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Busca por código (ej. H5521-419), nombre o aseguradora. Se compara contra el estado del
-          cliente: <strong>{stateLabel}</strong>.
+          Busca por código (ej. H5521-419), nombre o aseguradora. Se compara contra el catálogo{' '}
+          <strong>{NON_COMMISSIONABLE_PLAN_YEAR}</strong> y el estado del cliente:{' '}
+          <strong>{stateLabel}</strong>. Los años anteriores son solo histórico y no cuentan.
         </p>
         {targetPlanName ? (
           <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
@@ -115,7 +112,8 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
             Valida el plan antes de confirmar la estrategia
           </p>
           <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-            Si el plan aparece para {stateLabel}, verás una alerta roja.
+            Si el plan aparece para {NON_COMMISSIONABLE_PLAN_YEAR} en {stateLabel}, verás una
+            alerta roja.
           </p>
         </div>
       ) : null}
@@ -130,9 +128,9 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
               </p>
               <p className="mt-1 text-xs text-red-700/90 dark:text-red-300/90">
                 El plan coincide con {result.stateMatches.length} registro
-                {result.stateMatches.length === 1 ? '' : 's'} para{' '}
-                <strong>{result.state || 'todos los estados'}</strong>
-                {years.length > 0 ? ` · Año ${years.join(', ')}` : ''}.
+                {result.stateMatches.length === 1 ? '' : 's'} del catálogo{' '}
+                {NON_COMMISSIONABLE_PLAN_YEAR} para{' '}
+                <strong>{result.state || 'todos los estados'}</strong>.
               </p>
             </div>
           </div>
@@ -142,18 +140,23 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
       {result && !result.hasStateMatch ? (
         result.otherStates?.length > 0 ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-            <p className="font-semibold">Existe en el catálogo, pero para otro estado.</p>
+            <p className="font-semibold">
+              Existe en el catálogo {NON_COMMISSIONABLE_PLAN_YEAR}, pero para otro estado.
+            </p>
             <p className="mt-0.5">
-              No figura para {stateLabel}. Aparece en: {result.otherStates.join(', ')}.
+              No figura para {stateLabel} en el catálogo {NON_COMMISSIONABLE_PLAN_YEAR}. Aparece
+              en: {result.otherStates.join(', ')}.
             </p>
           </div>
         ) : (
           <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <p className="font-semibold">No figura en la lista para {stateLabel}.</p>
+              <p className="font-semibold">
+                No figura en el catálogo {NON_COMMISSIONABLE_PLAN_YEAR} para {stateLabel}.
+              </p>
               <p className="mt-0.5 opacity-90">
-                Verifica igualmente el plan y el año antes de confirmar la estrategia.
+                Verifica igualmente el plan antes de confirmar la estrategia.
               </p>
             </div>
           </div>

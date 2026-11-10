@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import {
+  NON_COMMISSIONABLE_PLAN_YEAR,
   areAllRequiredDocsChecked,
   calculateValidDocumentDates,
   formatRadiusNote,
@@ -682,14 +683,21 @@ export async function searchNonCommissionablePlanAction(query, state) {
 
     if (normalizedState) {
       stateMatches = await prisma.nonCommissionablePlan.findMany({
-        where: { state: normalizedState, OR: orConditions },
+        where: {
+          year: NON_COMMISSIONABLE_PLAN_YEAR,
+          state: normalizedState,
+          OR: orConditions,
+        },
         take: 25,
         orderBy: [{ year: 'desc' }, { carrier: 'asc' }, { planName: 'asc' }],
         select,
       });
     } else {
       stateMatches = await prisma.nonCommissionablePlan.findMany({
-        where: { OR: orConditions },
+        where: {
+          year: NON_COMMISSIONABLE_PLAN_YEAR,
+          OR: orConditions,
+        },
         take: 25,
         orderBy: [{ year: 'desc' }, { state: 'asc' }, { planName: 'asc' }],
         select,
@@ -700,7 +708,10 @@ export async function searchNonCommissionablePlanAction(query, state) {
 
     if (normalizedState && stateMatches.length === 0) {
       otherMatches = await prisma.nonCommissionablePlan.findMany({
-        where: { OR: orConditions },
+        where: {
+          year: NON_COMMISSIONABLE_PLAN_YEAR,
+          OR: orConditions,
+        },
         take: 15,
         orderBy: [{ year: 'desc' }, { state: 'asc' }],
         select,
