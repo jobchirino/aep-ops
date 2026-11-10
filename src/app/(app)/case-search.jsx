@@ -5,16 +5,29 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoaderCircle, Search, X } from 'lucide-react';
 
-export default function CaseSearch({ currentQuery, currentStage, currentAgent }) {
+export default function CaseSearch({
+  currentQuery,
+  currentStage,
+  currentAgent,
+  currentCategory,
+}) {
   const router = useRouter();
   const [value, setValue] = useState(currentQuery || '');
   const [pending, startTransition] = useTransition();
-  const filtersRef = useRef({ stage: currentStage, agent: currentAgent });
+  const filtersRef = useRef({
+    stage: currentStage,
+    agent: currentAgent,
+    category: currentCategory,
+  });
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    filtersRef.current = { stage: currentStage, agent: currentAgent };
-  }, [currentStage, currentAgent]);
+    filtersRef.current = {
+      stage: currentStage,
+      agent: currentAgent,
+      category: currentCategory,
+    };
+  }, [currentStage, currentAgent, currentCategory]);
 
   useEffect(() => {
     if (!initializedRef.current) {
@@ -24,9 +37,10 @@ export default function CaseSearch({ currentQuery, currentStage, currentAgent })
 
     const timer = window.setTimeout(() => {
       const term = value.trim();
-      const { stage, agent } = filtersRef.current;
+      const { stage, agent, category } = filtersRef.current;
       const params = new URLSearchParams();
 
+      if (category) params.set('category', category);
       if (stage) params.set('stage', stage);
       if (agent && agent !== 'all') params.set('agent', agent);
       if (term.length >= 2) params.set('q', term);
@@ -44,9 +58,10 @@ export default function CaseSearch({ currentQuery, currentStage, currentAgent })
     event.preventDefault();
 
     const term = value.trim();
-    const { stage, agent } = filtersRef.current;
+    const { stage, agent, category } = filtersRef.current;
     const params = new URLSearchParams();
 
+    if (category) params.set('category', category);
     if (stage) params.set('stage', stage);
     if (agent && agent !== 'all') params.set('agent', agent);
     if (term.length >= 2) params.set('q', term);

@@ -16,6 +16,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { getDashboardData } from '@/lib/dashboard';
 import { getAgents } from '@/lib/users';
 import { CLOSED_STAGES } from '@/lib/case-stages';
+import { CASE_CATEGORY_BY_VALUE } from '@/lib/case-categories';
 import {
   formatFollowUpDateTime,
   formatShortDateTime,
@@ -124,10 +125,12 @@ export default async function DashboardPage({ searchParams }) {
   const params = (await searchParams) || {};
   const stageParam = firstValue(params.stage);
   const agentParam = firstValue(params.agent);
+  const categoryParam = firstValue(params.category);
   const queryParam = firstValue(params.q);
 
   const stage = STAGE_BY_VALUE[stageParam] ? stageParam : '';
   const agent = ['all', 'mine', 'unassigned'].includes(agentParam) ? agentParam : 'all';
+  const category = CASE_CATEGORY_BY_VALUE[categoryParam] ? categoryParam : '';
   const searchTerm =
     typeof queryParam === 'string' ? queryParam.trim().slice(0, 80) : '';
 
@@ -135,6 +138,7 @@ export default async function DashboardPage({ searchParams }) {
     getDashboardData({
       stage,
       agent,
+      category,
       userId: user.id,
       searchTerm,
     }),
@@ -147,6 +151,19 @@ export default async function DashboardPage({ searchParams }) {
     if (category === 'CANCELADO') return stats.cancelado;
     if (category === 'ENTRANTE') return stats.entrante;
     return 0;
+  };
+
+  const categoryHref = (nextCategory) => {
+    const nextParams = new URLSearchParams();
+    const targetCategory = nextCategory === category ? '' : nextCategory;
+
+    if (targetCategory) nextParams.set('category', targetCategory);
+    if (stage) nextParams.set('stage', stage);
+    if (agent !== 'all') nextParams.set('agent', agent);
+    if (searchTerm) nextParams.set('q', searchTerm);
+
+    const query = nextParams.toString();
+    return query ? `/?${query}` : '/';
   };
 
   const closedDocsCount = stats.closed;
@@ -180,14 +197,16 @@ export default async function DashboardPage({ searchParams }) {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {CATEGORY_CARDS.map(({ category, label, Icon, iconClassName, caption }) => (
+        {CATEGORY_CARDS.map((card) => (
           <StatCard
-            key={category}
-            label={label}
-            value={countByCategory(category)}
-            Icon={Icon}
-            iconClassName={iconClassName}
-            caption={caption}
+            key={card.category}
+            label={card.label}
+            value={countByCategory(card.category)}
+            Icon={card.Icon}
+            iconClassName={card.iconClassName}
+            caption={card.caption}
+            href={categoryHref(card.category)}
+            active={category === card.category}
           />
         ))}
       </section>
@@ -202,7 +221,7 @@ export default async function DashboardPage({ searchParams }) {
           <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
             {cases.length}
           </span>
-          {stage || agent !== 'all' || searchTerm ? (
+          {stage || agent !== 'all' || category || searchTerm ? (
             <span className="text-[11px] text-zinc-400 dark:text-zinc-500">filtrados</span>
           ) : null}
         </div>
@@ -212,11 +231,13 @@ export default async function DashboardPage({ searchParams }) {
             currentQuery={searchTerm}
             currentStage={stage}
             currentAgent={agent}
+            currentCategory={category}
           />
           <CaseFilters
             stages={STAGES}
             currentStage={stage}
             currentAgent={agent}
+            currentCategory={category}
             currentSearch={searchTerm}
           />
         </div>
@@ -270,9 +291,9 @@ export default async function DashboardPage({ searchParams }) {
   );
 }
 
-function StatCard({ label, value, Icon, iconClassName, caption }) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+function StatCard({ label, value, Icon, iconClassName, caption, href, active }) {
+  const content = (
+    <>
       <span
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClassName}`}
       >
@@ -289,7 +310,35 @@ function StatCard({ label, value, Icon, iconClassName, caption }) {
           <p className="truncate text-[10px] text-zinc-400 dark:text-zinc-500">{caption}</p>
         ) : null}
       </div>
-    </div>
+      {active ? (
+        <span className="ml-auto shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
+          Filtro
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (!href) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      aria-current={active ? 'true' : undefined}
+      title={active ? `Quitar filtro de ${label}` : `Filtrar por ${label}`}
+      className={`group flex items-center gap-3 rounded-2xl border p-4 shadow-sm transition ${
+        active
+          ? 'border-sky-300 bg-sky-50/60 ring-2 ring-sky-500/10 dark:border-sky-500/40 dark:bg-sky-500/5'
+          : 'border-zinc-200 bg-white hover:border-sky-200 hover:bg-sky-50/30 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-sky-500/30 dark:hover:bg-sky-500/5'
+      }`}
+    >
+      {content}
+    </Link>
   );
 }
 

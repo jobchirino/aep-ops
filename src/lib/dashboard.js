@@ -6,11 +6,15 @@ import { GOAL_EXCLUDED_CATEGORY } from '@/lib/case-categories';
 
 const LIST_LIMIT = 300;
 
-function buildWhere({ stage, agent, userId, searchTerm }) {
+function buildWhere({ stage, agent, category, userId, searchTerm }) {
   const conditions = [];
 
   if (stage) {
     conditions.push(Prisma.sql`a.stage = ${stage}`);
+  }
+
+  if (category) {
+    conditions.push(Prisma.sql`a.category = ${category}`);
   }
 
   if (agent === 'mine') {
@@ -52,8 +56,8 @@ function buildWhere({ stage, agent, userId, searchTerm }) {
  * 1. Totales globales por categoría y etapa cerrada.
  * 2. Lista filtrada con cliente, agente, bloqueo y última nota (LATERAL).
  */
-export async function getDashboardData({ stage, agent, userId, searchTerm }) {
-  const whereSql = buildWhere({ stage, agent, userId, searchTerm });
+export async function getDashboardData({ stage, agent, category, userId, searchTerm }) {
+  const whereSql = buildWhere({ stage, agent, category, userId, searchTerm });
 
   const [statsRows, rows] = await Promise.all([
     prisma.$queryRaw`

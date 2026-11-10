@@ -63,6 +63,11 @@ Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISI
 - Al cerrar el caso o pasarlo a `DESCARTADO`, el seguimiento se limpia automáticamente.
 - El badge del header enlaza a `/pendientes`.
 
+### 4.5 Filtros del dashboard
+- El dashboard permite filtrar la lista por **categoría**, etapa, agente y búsqueda por nombre/teléfono.
+- Las cuatro tarjetas de categoría también aplican el filtro al hacer clic; al hacer clic en la activa, lo quitan.
+- Los filtros se conservan entre sí y se reflejan en la URL (`?category=...&stage=...&agent=...&q=...`).
+
 ## 5. Reglas de Negocio Críticas
 ### A. De 21 Puntos a 13 Puntos
 - El formulario de **21 Puntos** guarda las respuestas de la llamada en JSON.
