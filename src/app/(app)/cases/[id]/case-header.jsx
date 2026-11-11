@@ -32,6 +32,11 @@ const CATEGORY_STYLES = {
     className:
       'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30',
   },
+  CLOVER_REENROLL: {
+    label: 'Clover ReEnroll',
+    className:
+      'bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/30',
+  },
   CANCELADO: {
     label: 'Cancelado',
     className:

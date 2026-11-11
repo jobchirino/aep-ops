@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   Ban,
   CalendarClock,
+  HeartPulse,
   Inbox,
   PhoneIncoming,
   Plus,
@@ -95,6 +96,14 @@ const CATEGORY_CARDS = [
       'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
   },
   {
+    category: 'CLOVER_REENROLL',
+    label: 'Clover ReEnroll',
+    Icon: HeartPulse,
+    iconClassName:
+      'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300',
+    caption: 'Re-enroll 2027',
+  },
+  {
     category: 'CANCELADO',
     label: 'Cancelado',
     Icon: Inbox,
@@ -148,6 +157,7 @@ export default async function DashboardPage({ searchParams }) {
   const countByCategory = (category) => {
     if (category === 'NO_RENOVABLE') return stats.noRenovable;
     if (category === 'NO_COMISIONABLE') return stats.noComisionable;
+    if (category === 'CLOVER_REENROLL') return stats.cloverReenroll;
     if (category === 'CANCELADO') return stats.cancelado;
     if (category === 'ENTRANTE') return stats.entrante;
     return 0;
@@ -196,7 +206,7 @@ export default async function DashboardPage({ searchParams }) {
         </Link>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {CATEGORY_CARDS.map((card) => (
           <StatCard
             key={card.category}

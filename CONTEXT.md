@@ -18,7 +18,7 @@
 > Tatiana **no es usuaria del sistema**: recibe las aplicaciones por un chat externo.
 
 ## 3. Flujo Operativo del Caso (Pipeline AEP)
-Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISIONABLE`, `CANCELADO` o `ENTRANTE`. Los casos `ENTRANTE` son clientes que ya existen en Radius o leads importados y llaman por su cuenta para un cambio de plan; se agregan desde el buscador de clientes y leads del dashboard. La categoría puede editarse desde la cabecera del detalle del caso; cada cambio se registra como `CATEGORY_CHANGE` firmado. Y pasa por estas etapas (`stage`):
+Cada cliente de AEP proviene de una de 5 categorías: `NO_RENOVABLE`, `NO_COMISIONABLE`, `CLOVER_REENROLL`, `CANCELADO` o `ENTRANTE`. Los casos `ENTRANTE` son clientes que ya existen en Radius o leads importados y llaman por su cuenta para un cambio de plan; se agregan desde el buscador de clientes y leads del dashboard. La categoría puede editarse desde la cabecera del detalle del caso; cada cambio se registra como `CATEGORY_CHANGE` firmado. Y pasa por estas etapas (`stage`):
 1. `SIN_CONTACTAR`: Pendiente de primera llamada.
 2. `EN_SEGUIMIENTO`: No contestó (NC), se dejó SMS/Voicemail, o pidió que lo llamen en otra fecha (`nextFollowUpAt`).
 3. `PUNTOS_COMPLETOS`: Ya se levantaron los 21 puntos en llamada y se generaron los 13 puntos.
@@ -65,8 +65,18 @@ Cada cliente de AEP proviene de una de 4 categorías: `NO_RENOVABLE`, `NO_COMISI
 
 ### 4.5 Filtros del dashboard
 - El dashboard permite filtrar la lista por **categoría**, etapa, agente y búsqueda por nombre/teléfono.
-- Las cuatro tarjetas de categoría también aplican el filtro al hacer clic; al hacer clic en la activa, lo quitan.
+- Las cinco tarjetas de categoría también aplican el filtro al hacer clic; al hacer clic en la activa, lo quitan.
 - Los filtros se conservan entre sí y se reflejan en la URL (`?category=...&stage=...&agent=...&q=...`).
+
+### 4.6 Clover ReEnroll
+- Nueva categoría `CLOVER_REENROLL` para clientes con planes Clover descontinuados que deben re-enrolarse.
+- Los casos creados por el listado quedan en `SIN_CONTACTAR` y sin agente asignado.
+- El listado se importa con:
+  1. `node prisma/import-clover-reenroll.mjs --dry-run`
+  2. `node prisma/import-clover-reenroll.mjs`
+- El importador cruza por CP, MBI, nombre + DOB, nombre + teléfono o teléfono + DOB. Los casos dudosos se dejan para revisión y no se crean automáticamente.
+- No se crean clientes nuevos ni se duplican casos: un cliente solo puede tener un caso AEP.
+- Los casos `CLOVER_REENROLL` **sí cuentan** para la meta de 50; la meta solo excluye `ENTRANTE`.
 
 ## 5. Reglas de Negocio Críticas
 ### A. De 21 Puntos a 13 Puntos

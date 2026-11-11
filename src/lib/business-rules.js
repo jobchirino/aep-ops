@@ -193,6 +193,8 @@ export function generateThirteenPointsText(client, aepCase) {
       ? 'RW - Cambio Plan (plan No comisionable 2027)'
       : aepCase?.category === 'NO_RENOVABLE'
       ? 'RW - Cambio Plan (plan No renovable 2027)'
+      : aepCase?.category === 'CLOVER_REENROLL'
+      ? 'RW - ReEnroll Clover 2027'
       : aepCase?.category === 'ENTRANTE'
       ? 'RW - Cambio de Plan (cliente entrante)'
       : 'RW - Recuperación Cliente Cancelado');

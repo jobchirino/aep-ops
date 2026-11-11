@@ -64,6 +64,7 @@ export async function getDashboardData({ stage, agent, category, userId, searchT
       SELECT
         COUNT(*) FILTER (WHERE category = 'NO_RENOVABLE')::int AS "noRenovable",
         COUNT(*) FILTER (WHERE category = 'NO_COMISIONABLE')::int AS "noComisionable",
+        COUNT(*) FILTER (WHERE category = 'CLOVER_REENROLL')::int AS "cloverReenroll",
         COUNT(*) FILTER (WHERE category = 'CANCELADO')::int AS "cancelado",
         COUNT(*) FILTER (WHERE category = 'ENTRANTE')::int AS "entrante",
         COUNT(*) FILTER (
@@ -115,6 +116,7 @@ export async function getDashboardData({ stage, agent, category, userId, searchT
   const stats = statsRows[0] || {
     noRenovable: 0,
     noComisionable: 0,
+    cloverReenroll: 0,
     cancelado: 0,
     entrante: 0,
     closed: 0,
@@ -157,6 +159,10 @@ export async function getDashboardData({ stage, agent, category, userId, searchT
     cases,
     stats,
     totalCases:
-      stats.noRenovable + stats.noComisionable + stats.cancelado + stats.entrante,
+      stats.noRenovable +
+      stats.noComisionable +
+      stats.cloverReenroll +
+      stats.cancelado +
+      stats.entrante,
   };
 }
