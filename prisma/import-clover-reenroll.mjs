@@ -3,6 +3,7 @@
 // Uso:
 //   node prisma/import-clover-reenroll.mjs --dry-run
 //   node prisma/import-clover-reenroll.mjs
+//   node prisma/import-clover-reenroll.mjs --include-review
 import { loadEnvFile } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -20,6 +21,7 @@ const prisma = new PrismaClient();
 const CATEGORY = 'CLOVER_REENROLL';
 const DEFAULT_FILE = path.join(process.cwd(), 'data', 'CLOVER_REENROLL_2027.xlsx');
 const DRY_RUN = process.argv.includes('--dry-run');
+const INCLUDE_REVIEW = process.argv.includes('--include-review');
 
 // El archivo no trae fila de encabezados. Estas son las posiciones reales.
 const COL = {
@@ -341,13 +343,19 @@ function report(evaluation, dryRun) {
     counts[item.status] += 1;
   }
 
+  const createCount = counts.ready + (INCLUDE_REVIEW ? counts.review : 0);
+
   console.log('');
   console.log(`📄 Filas: ${evaluation.length}`);
-  console.log(`✅ Listas para crear: ${counts.ready}`);
+  console.log(`✅ Listas para crear: ${createCount}`);
   console.log(`⚠️ Para revisar: ${counts.review + counts.ambiguous + counts.not_found}`);
   console.log(`🔁 Ya importadas: ${counts.already_imported}`);
   console.log(`⛔ Conflictos con otro caso: ${counts.conflict}`);
-  console.log(`🧪 Modo: ${dryRun ? 'DRY-RUN' : 'IMPORTACIÓN REAL'}`);
+  console.log(
+    `🧪 Modo: ${dryRun ? 'DRY-RUN' : 'IMPORTACIÓN REAL'}${
+      INCLUDE_REVIEW ? ' · incluye revisión' : ''
+    }`
+  );
   console.log('');
 
   for (const item of evaluation) {
@@ -369,7 +377,11 @@ async function main() {
 
   const evaluation = await getEvaluation();
   const conflicts = evaluation.filter((item) => item.status === 'conflict');
-  const ready = evaluation.filter((item) => item.status === 'ready');
+  const actionable = evaluation.filter(
+    (item) =>
+      item.status === 'ready' ||
+      (INCLUDE_REVIEW && item.status === 'review' && item.selected)
+  );
 
   report(evaluation, DRY_RUN);
 
@@ -387,7 +399,7 @@ async function main() {
     return;
   }
 
-  if (ready.length === 0) {
+  if (actionable.length === 0) {
     console.log('');
     console.log('No hay casos nuevos por crear.');
     return;
@@ -401,7 +413,7 @@ async function main() {
 
   let created = 0;
 
-  for (const item of ready) {
+  for (const item of actionable) {
     const { row, selected } = item;
 
     if (!selected) continue;
@@ -450,7 +462,11 @@ async function main() {
 
   console.log('');
   console.log(`✅ Casos creados: ${created}`);
-  console.log('ℹ️ Los clientes para revisar no fueron modificados.');
+  console.log(
+    INCLUDE_REVIEW
+      ? 'ℹ️ Se incluyeron las coincidencias de revisión confirmadas.'
+      : 'ℹ️ Los clientes para revisar no fueron modificados.'
+  );
 }
 
 main()
