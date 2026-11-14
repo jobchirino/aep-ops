@@ -637,7 +637,7 @@ export async function logQuickNoteAction(caseId, preset) {
 /**
  * Busca un plan en el catálogo de no comisionables por código, nombre o carrier.
  */
-export async function searchNonCommissionablePlanAction(query, state) {
+export async function searchNonCommissionablePlanAction(query, state, mode) {
   await requireUser();
 
   const rawQuery = String(query || '').trim();
@@ -647,6 +647,7 @@ export async function searchNonCommissionablePlanAction(query, state) {
   }
 
   const normalizedState = String(state || '').trim().toUpperCase();
+  const wellcareMode = String(mode || '').trim().toUpperCase() === 'WELLCARE';
   const compactQuery = rawQuery
     .toUpperCase()
     .replace(/[|:]/g, '-')
@@ -678,7 +679,53 @@ export async function searchNonCommissionablePlanAction(query, state) {
     statusNote: true,
   };
 
+  const selectCommissionable = {
+    id: true,
+    carrier: true,
+    year: true,
+    state: true,
+    planId: true,
+    rawPlanId: true,
+    planName: true,
+    planType: true,
+    serviceArea: true,
+  };
+
+  if (wellcareMode && !normalizedState) {
+    return {
+      ok: false,
+      error: 'El cliente no tiene estado registrado; no se puede validar Wellcare 2027.',
+    };
+  }
+
   try {
+    if (wellcareMode) {
+      const commissionableMatches = await prisma.commissionablePlan.findMany({
+        where: {
+          carrier: 'WELLCARE',
+          year: NON_COMMISSIONABLE_PLAN_YEAR,
+          state: normalizedState,
+          OR: orConditions,
+        },
+        take: 25,
+        orderBy: [{ planName: 'asc' }, { planId: 'asc' }],
+        select: selectCommissionable,
+      });
+
+      return {
+        ok: true,
+        query: rawQuery,
+        state: normalizedState,
+        wellcareMode: true,
+        commissionableMatches,
+        hasCommissionableMatch: commissionableMatches.length > 0,
+        stateMatches: [],
+        otherMatches: [],
+        otherStates: [],
+        hasStateMatch: false,
+      };
+    }
+
     let stateMatches = [];
 
     if (normalizedState) {
@@ -724,6 +771,9 @@ export async function searchNonCommissionablePlanAction(query, state) {
       ok: true,
       query: rawQuery,
       state: normalizedState,
+      wellcareMode: false,
+      commissionableMatches: [],
+      hasCommissionableMatch: false,
       stateMatches,
       otherMatches,
       otherStates,

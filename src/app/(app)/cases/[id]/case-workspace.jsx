@@ -98,6 +98,8 @@ export default function CaseWorkspace({ aepCase, client }) {
             initialQuery={initialPlanQuery}
             clientState={client.state}
             targetPlanName={aepCase.targetPlanName}
+            currentCarrier={aepCase.currentCarrier}
+            targetCarrier={aepCase.targetCarrier}
           />
         </TabsContent>
 

@@ -15,14 +15,29 @@ import { NON_COMMISSIONABLE_PLAN_YEAR } from '@/lib/business-rules';
 const inputClasses =
   'w-full rounded-xl border border-zinc-300 bg-white py-2.5 pl-9 pr-3 text-sm text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500';
 
-export default function PlanValidator({ initialQuery, clientState, targetPlanName }) {
+const selectClasses =
+  'w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-xs font-medium text-zinc-700 shadow-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200';
+
+export default function PlanValidator({
+  initialQuery,
+  clientState,
+  targetPlanName,
+  currentCarrier,
+  targetCarrier,
+}) {
+  const targetText = `${targetCarrier || ''} ${targetPlanName || ''}`.trim();
+  const initialMode = /wellcare/i.test(targetText || currentCarrier || '')
+    ? 'WELLCARE'
+    : '';
+
+  const [mode, setMode] = useState(initialMode);
   const [query, setQuery] = useState(initialQuery || '');
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const runSearch = useCallback(
-    async (value) => {
+    async (value, nextMode = mode) => {
       const searchTerm = String(value || '').trim();
 
       if (searchTerm.length < 2) {
@@ -33,7 +48,11 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
       setLoading(true);
       setError('');
 
-      const response = await searchNonCommissionablePlanAction(searchTerm, clientState);
+      const response = await searchNonCommissionablePlanAction(
+        searchTerm,
+        clientState,
+        nextMode
+      );
 
       setLoading(false);
 
@@ -45,7 +64,7 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
 
       setResult(response);
     },
-    [clientState]
+    [clientState, mode]
   );
 
   function handleSubmit(event) {
@@ -53,7 +72,20 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
     runSearch(query);
   }
 
+  function handleModeChange(event) {
+    const nextMode = event.target.value;
+
+    setMode(nextMode);
+    setResult(null);
+    setError('');
+
+    if (query.trim().length >= 2) {
+      runSearch(query, nextMode);
+    }
+  }
+
   const stateLabel = clientState || 'sin estado registrado';
+  const isWellcareMode = mode === 'WELLCARE';
 
   return (
     <div className="space-y-4">
@@ -66,6 +98,12 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
           <strong>{NON_COMMISSIONABLE_PLAN_YEAR}</strong> y el estado del cliente:{' '}
           <strong>{stateLabel}</strong>. Los años anteriores son solo histórico y no cuentan.
         </p>
+        {isWellcareMode ? (
+          <p className="mt-1 rounded-lg bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
+            Regla Wellcare: solo los planes que aparecen en la lista de comisionables Wellcare
+            2027 tienen comisión. Si no está en la lista, es NO comisionable.
+          </p>
+        ) : null}
         {targetPlanName ? (
           <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
             Estrategia actual del caso: <span className="font-medium">{targetPlanName}</span>
@@ -73,14 +111,29 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
         ) : null}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <label className="flex flex-col gap-1 sm:w-52">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+            Aseguradora a validar
+          </span>
+          <select
+            value={mode}
+            onChange={handleModeChange}
+            aria-label="Aseguradora a validar"
+            className={selectClasses}
+          >
+            <option value="">Todas las aseguradoras</option>
+            <option value="WELLCARE">Wellcare 2027</option>
+          </select>
+        </label>
+
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
           <input
             type="text"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="H5521-419, Clover, Humana…"
+            placeholder="H5521-419, Wellcare…"
             aria-label="Buscar plan no comisionable"
             className={inputClasses}
           />
@@ -112,13 +165,49 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
             Valida el plan antes de confirmar la estrategia
           </p>
           <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-            Si el plan aparece para {NON_COMMISSIONABLE_PLAN_YEAR} en {stateLabel}, verás una
-            alerta roja.
+            {isWellcareMode
+              ? `En modo Wellcare 2027, si el plan no está en la lista de comisionables para ${stateLabel}, se marcará como NO comisionable.`
+              : `Si el plan aparece para ${NON_COMMISSIONABLE_PLAN_YEAR} en ${stateLabel}, verás una alerta roja.`}
           </p>
         </div>
       ) : null}
 
-      {result?.hasStateMatch ? (
+      {result?.wellcareMode && result.hasCommissionableMatch ? (
+        <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="mt-0.5 h-7 w-7 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div>
+              <p className="text-base font-bold text-emerald-700 dark:text-emerald-300">
+                ✅ PLAN COMISIONABLE WELLCARE 2027
+              </p>
+              <p className="mt-1 text-xs text-emerald-700/90 dark:text-emerald-300/90">
+                El plan figura en la lista de comisionables Wellcare 2027 para{' '}
+                <strong>{result.state}</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {result?.wellcareMode && !result.hasCommissionableMatch ? (
+        <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 shadow-sm dark:border-red-500/40 dark:bg-red-500/10">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-7 w-7 shrink-0 text-red-600 dark:text-red-400" />
+            <div>
+              <p className="text-base font-bold text-red-700 dark:text-red-300">
+                ⚠️ PLAN NO COMISIONABLE
+              </p>
+              <p className="mt-1 text-xs text-red-700/90 dark:text-red-300/90">
+                El plan no figura en la lista de comisionables Wellcare 2027 para{' '}
+                <strong>{result.state || 'el estado del cliente'}</strong>. Por regla, no tiene
+                comisión.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {result?.hasStateMatch && !result.wellcareMode ? (
         <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 shadow-sm dark:border-red-500/40 dark:bg-red-500/10">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-7 w-7 shrink-0 text-red-600 dark:text-red-400" />
@@ -137,7 +226,7 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
         </div>
       ) : null}
 
-      {result && !result.hasStateMatch ? (
+      {result && !result.wellcareMode && !result.hasStateMatch ? (
         result.otherStates?.length > 0 ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
             <p className="font-semibold">
@@ -163,7 +252,55 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
         )
       ) : null}
 
-      {result && result.stateMatches.length > 0 ? (
+      {result?.wellcareMode && result.commissionableMatches?.length > 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-emerald-200 dark:border-emerald-500/30">
+          <p className="border-b border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+            Coincidencias comisionables · Wellcare {NON_COMMISSIONABLE_PLAN_YEAR}
+          </p>
+          <table className="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr className="border-b border-emerald-100 bg-emerald-50/50 text-[10px] font-semibold uppercase tracking-wide text-emerald-700/80 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:text-emerald-300/80">
+                <th className="px-3 py-2">Plan</th>
+                <th className="px-3 py-2">Carrier</th>
+                <th className="px-3 py-2">Año</th>
+                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Tipo</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-emerald-100 dark:divide-emerald-500/20">
+              {result.commissionableMatches.map((match) => (
+                <tr key={match.id} className="align-top">
+                  <td className="px-3 py-2">
+                    <p className="font-medium text-zinc-800 dark:text-zinc-100">
+                      {match.planName || '—'}
+                    </p>
+                    <p className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
+                      {match.planId}
+                      {match.rawPlanId && match.rawPlanId !== match.planId
+                        ? ` · ${match.rawPlanId}`
+                        : ''}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2 text-zinc-600 dark:text-zinc-300">
+                    {match.carrier}
+                  </td>
+                  <td className="px-3 py-2 tabular-nums text-zinc-600 dark:text-zinc-300">
+                    {match.year}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[10px] text-zinc-600 dark:text-zinc-300">
+                    {match.state}
+                  </td>
+                  <td className="px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {match.planType || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {result && !result.wellcareMode && result.stateMatches.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
           <table className="w-full border-collapse text-left text-xs">
             <thead>
@@ -206,7 +343,7 @@ export default function PlanValidator({ initialQuery, clientState, targetPlanNam
         </div>
       ) : null}
 
-      {result && result.otherMatches?.length > 0 ? (
+      {result && !result.wellcareMode && result.otherMatches?.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-zinc-200 opacity-80 dark:border-zinc-800">
           <p className="border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
             Coincidencias en otros estados

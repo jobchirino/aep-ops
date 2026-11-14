@@ -92,6 +92,8 @@ Cada cliente de AEP proviene de una de 5 categorías: `NO_RENOVABLE`, `NO_COMISI
 - Antes de confirmar el campo `ESTRATEGIA` (Plan Nuevo), el agente puede buscar por `Plan ID` (ej. `H5521-419`) o nombre y Estado en la tabla `NonCommissionablePlan`.
 - El validador consulta **solo el catálogo 2027**. Los registros 2025/2026 se conservan como histórico y no generan alertas.
 - Si el plan aparece en la lista de no comisionables 2027 para ese Estado, mostrar alerta roja: `"⚠️ CUIDADO: Este plan figura como NO COMISIONABLE"`.
+- **Wellcare 2027 usa una lista blanca:** los 57 planes de la pestaña `COMISIONABLE WELLCARE 2027` son comisionables. En el validador se selecciona el modo **Wellcare 2027**; si el plan no está en esa lista para el estado del cliente, se marca como **NO comisionable**.
+- La lista blanca vive en la tabla `CommissionablePlan` y se importa con `node prisma/import-wellcare-2027-commissionable.mjs`. No se debe confundir con los registros históricos de Wellcare 2025/2026.
 
 ### C. Checklist Dinámico de Documentos por Aseguradora
 - Si `targetCarrier` es **Clover** (case-insensitive), se requieren **4 documentos obligatorios**:

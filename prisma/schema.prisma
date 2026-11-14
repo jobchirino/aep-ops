@@ -160,3 +160,19 @@ model NonCommissionablePlan {
   @@index([planId])
   @@index([carrier, state, year])
 }
+
+model CommissionablePlan {
+  id          String   @id @default(cuid())
+  carrier     String
+  year        Int
+  state       String
+  planId      String   // Normalizado ej: H0351-071
+  rawPlanId   String
+  planName    String
+  planType    String?
+  serviceArea String?
+  createdAt   DateTime @default(now())
+
+  @@index([planId])
+  @@index([carrier, state, year])
+}
