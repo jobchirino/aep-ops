@@ -79,6 +79,11 @@ Cada cliente de AEP proviene de una de 5 categorías: `NO_RENOVABLE`, `NO_COMISI
 - No se crean clientes nuevos ni se duplican casos: un cliente solo puede tener un caso AEP.
 - Los casos `CLOVER_REENROLL` **sí cuentan** para la meta de 50; la meta solo excluye `ENTRANTE`.
 
+### 4.7 Reporte ejecutivo
+- La ruta pública `/reportes` muestra un resumen por categoría (sin Entrantes) con totales de clientes, cerrados, pendientes, en proceso, sin contactar y descartados.
+- Los grupos son excluyentes: cerrados (`CERRADO_DOCS_ENVIADOS`), en proceso, sin contactar y descartados. Pendientes totales = en proceso + sin contactar.
+- El PDF se genera desde el navegador con el botón **Descargar PDF** (`window.print()`), usando estilos `@media print`.
+
 ## 5. Reglas de Negocio Críticas
 ### A. De 21 Puntos a 13 Puntos
 - El formulario de **21 Puntos** guarda las respuestas de la llamada en JSON.
