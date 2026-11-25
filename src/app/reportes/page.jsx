@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Download, Target } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { APP_TIME_ZONE } from '@/lib/datetime';
+import { getDiscardReason } from '@/lib/discard-reasons';
 import PrintButton from './print-button';
 
 export const metadata = {
@@ -45,6 +46,10 @@ const CATEGORIES = [
     softClassName: 'bg-zinc-100',
   },
 ];
+
+const CATEGORY_BY_VALUE = Object.fromEntries(
+  CATEGORIES.map((category) => [category.value, category])
+);
 
 const STATUSES = [
   {
@@ -109,11 +114,26 @@ function formatReportDate() {
 }
 
 export default async function ReportPage() {
-  const rows = await prisma.aepCase.groupBy({
-    by: ['category', 'stage'],
-    where: { category: { not: 'ENTRANTE' } },
-    _count: { _all: true },
-  });
+  const [rows, discardedCases] = await Promise.all([
+    prisma.aepCase.groupBy({
+      by: ['category', 'stage'],
+      where: { category: { not: 'ENTRANTE' } },
+      _count: { _all: true },
+    }),
+    prisma.aepCase.findMany({
+      where: { stage: 'DESCARTADO', category: { not: 'ENTRANTE' } },
+      select: {
+        id: true,
+        category: true,
+        client: { select: { fullName: true } },
+        timeline: {
+          where: { eventType: 'NOTE' },
+          select: { content: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    }),
+  ]);
 
   const categoryMap = new Map(
     CATEGORIES.map((category) => [category.value, emptyCategory(category)])
@@ -175,6 +195,30 @@ export default async function ReportPage() {
       dashOffset: -offset,
     };
   });
+
+  const discardedWithReasons = discardedCases
+    .map((aepCase) => ({
+      ...aepCase,
+      reason: getDiscardReason(aepCase),
+    }))
+    .sort((left, right) => {
+      const leftCategory = CATEGORIES.findIndex(
+        (category) => category.value === left.category
+      );
+      const rightCategory = CATEGORIES.findIndex(
+        (category) => category.value === right.category
+      );
+
+      if (leftCategory !== rightCategory) return leftCategory - rightCategory;
+
+      return String(left.client?.fullName || '').localeCompare(
+        String(right.client?.fullName || ''),
+        'es'
+      );
+    });
+
+  const discardedWithReason = discardedWithReasons.filter((item) => item.reason);
+  const discardedWithoutReason = discardedWithReasons.filter((item) => !item.reason);
 
   return (
     <main className="report-page mx-auto max-w-5xl space-y-5 bg-white px-4 py-6 text-zinc-900 sm:px-8 sm:py-10">
@@ -449,6 +493,80 @@ export default async function ReportPage() {
           </table>
         </div>
       </section>
+
+      {discardedWithReasons.length > 0 ? (
+        <section className="report-section rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-900">
+                Clientes descartados
+              </h2>
+              <p className="mt-0.5 text-[11px] text-zinc-500">
+                Motivo registrado en la última nota del caso · No incluye Entrantes.
+              </p>
+            </div>
+            <span className="w-fit rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-zinc-600">
+              {discardedWithReasons.length}
+            </span>
+          </div>
+
+          {discardedWithReason.length > 0 ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {discardedWithReason.map((item) => {
+                const category = CATEGORY_BY_VALUE[item.category];
+
+                return (
+                  <article
+                    key={item.id}
+                    className="break-inside-avoid rounded-xl border border-zinc-200 bg-zinc-50/60 p-3"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          category?.dotClassName || 'bg-zinc-400'
+                        }`}
+                      />
+                      <span
+                        className={`text-[10px] font-semibold uppercase tracking-wide ${
+                          category?.textClassName || 'text-zinc-600'
+                        }`}
+                      >
+                        {category?.label || item.category}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs font-semibold text-zinc-900">
+                      {item.client?.fullName || 'Cliente sin nombre'}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-zinc-600">
+                      {item.reason}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {discardedWithoutReason.length > 0 ? (
+            <div className="break-inside-avoid mt-4 rounded-xl border border-dashed border-amber-200 bg-amber-50/70 p-3">
+              <p className="text-[11px] font-semibold text-amber-800">
+                Sin motivo registrado ({discardedWithoutReason.length})
+              </p>
+              <ul className="mt-1.5 space-y-1 text-[11px] text-amber-800">
+                {discardedWithoutReason.map((item) => {
+                  const category = CATEGORY_BY_VALUE[item.category];
+
+                  return (
+                    <li key={item.id}>
+                      {item.client?.fullName || 'Cliente sin nombre'}
+                      {category?.label ? ` · ${category.label}` : ''}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <footer className="report-section flex flex-col gap-2 border-t border-zinc-200 pt-3 text-[10px] text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
         <p>

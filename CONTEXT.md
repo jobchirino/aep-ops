@@ -82,6 +82,7 @@ Cada cliente de AEP proviene de una de 5 categorías: `NO_RENOVABLE`, `NO_COMISI
 ### 4.7 Reporte ejecutivo
 - La ruta pública `/reportes` muestra un resumen por categoría (sin Entrantes) con totales de clientes, cerrados, pendientes, en proceso, sin contactar y descartados.
 - Los grupos son excluyentes: cerrados (`CERRADO_DOCS_ENVIADOS`), en proceso, sin contactar y descartados. Pendientes totales = en proceso + sin contactar.
+- La sección de descartados muestra el motivo resumido de la última nota del caso. Si no hay motivo identificable, el cliente aparece en la lista **Sin motivo registrado**.
 - El PDF se genera desde el navegador con el botón **Descargar PDF** (`window.print()`), usando estilos `@media print`.
 
 ## 5. Reglas de Negocio Críticas
