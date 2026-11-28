@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 
 export const SESSION_COOKIE = 'aep_session';
 
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 días
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 400; // 400 días
 const JWT_ALGORITHM = 'HS256';
 
 // Solo se usa en desarrollo cuando falta AUTH_SECRET. En producción es obligatorio.

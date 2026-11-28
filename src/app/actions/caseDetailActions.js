@@ -14,6 +14,7 @@ import {
 } from '@/lib/business-rules';
 import { fromZonedInputs, toZonedDateInputs } from '@/lib/datetime';
 import { CASE_STAGE_BY_VALUE, CLOSED_STAGES } from '@/lib/case-stages';
+import { matchesState, normalizeStateCode, stateTokens } from '@/lib/states';
 import { CASE_CATEGORY_BY_VALUE } from '@/lib/case-categories';
 
 const DOC_KEYS = ['soa', 'enrollment', 'attestation', 'sou'];
@@ -646,7 +647,7 @@ export async function searchNonCommissionablePlanAction(query, state, mode) {
     return { ok: false, error: 'Escribe al menos 2 caracteres para buscar.' };
   }
 
-  const normalizedState = String(state || '').trim().toUpperCase();
+  const normalizedState = normalizeStateCode(state);
   const wellcareMode = String(mode || '').trim().toUpperCase() === 'WELLCARE';
   const compactQuery = rawQuery
     .toUpperCase()
@@ -700,17 +701,19 @@ export async function searchNonCommissionablePlanAction(query, state, mode) {
 
   try {
     if (wellcareMode) {
-      const commissionableMatches = await prisma.commissionablePlan.findMany({
+      const commissionableCandidates = await prisma.commissionablePlan.findMany({
         where: {
           carrier: 'WELLCARE',
           year: NON_COMMISSIONABLE_PLAN_YEAR,
-          state: normalizedState,
           OR: orConditions,
         },
-        take: 25,
         orderBy: [{ planName: 'asc' }, { planId: 'asc' }],
         select: selectCommissionable,
       });
+
+      const commissionableMatches = commissionableCandidates
+        .filter((plan) => matchesState(plan.state, normalizedState))
+        .slice(0, 25);
 
       return {
         ok: true,
@@ -726,46 +729,36 @@ export async function searchNonCommissionablePlanAction(query, state, mode) {
       };
     }
 
-    let stateMatches = [];
+    const candidates = await prisma.nonCommissionablePlan.findMany({
+      where: {
+        year: NON_COMMISSIONABLE_PLAN_YEAR,
+        OR: orConditions,
+      },
+      orderBy: [{ year: 'desc' }, { carrier: 'asc' }, { planName: 'asc' }],
+      select,
+    });
 
-    if (normalizedState) {
-      stateMatches = await prisma.nonCommissionablePlan.findMany({
-        where: {
-          year: NON_COMMISSIONABLE_PLAN_YEAR,
-          state: normalizedState,
-          OR: orConditions,
-        },
-        take: 25,
-        orderBy: [{ year: 'desc' }, { carrier: 'asc' }, { planName: 'asc' }],
-        select,
-      });
-    } else {
-      stateMatches = await prisma.nonCommissionablePlan.findMany({
-        where: {
-          year: NON_COMMISSIONABLE_PLAN_YEAR,
-          OR: orConditions,
-        },
-        take: 25,
-        orderBy: [{ year: 'desc' }, { state: 'asc' }, { planName: 'asc' }],
-        select,
-      });
-    }
+    const stateMatches = (
+      normalizedState
+        ? candidates.filter((plan) => matchesState(plan.state, normalizedState))
+        : candidates
+    ).slice(0, 25);
 
     let otherMatches = [];
 
     if (normalizedState && stateMatches.length === 0) {
-      otherMatches = await prisma.nonCommissionablePlan.findMany({
-        where: {
-          year: NON_COMMISSIONABLE_PLAN_YEAR,
-          OR: orConditions,
-        },
-        take: 15,
-        orderBy: [{ year: 'desc' }, { state: 'asc' }],
-        select,
-      });
+      otherMatches = candidates
+        .filter((plan) => !matchesState(plan.state, normalizedState))
+        .slice(0, 15);
     }
 
-    const otherStates = [...new Set(otherMatches.map((match) => match.state))].slice(0, 8);
+    const otherStates = [
+      ...new Set(
+        otherMatches
+          .flatMap((match) => stateTokens(match.state))
+          .filter((state) => state && state !== 'ALL')
+      ),
+    ].slice(0, 8);
 
     return {
       ok: true,
@@ -876,9 +869,9 @@ async function computeDocumentDates({ caseId, targetCarrier, clientState }) {
     return { ok: false, error: 'No se pudieron calcular las fechas de los documentos.' };
   }
 
-  const stateUpper = String(clientState).trim().toUpperCase();
+  const stateUpper = normalizeStateCode(clientState);
   const hasSameState = existingCasesForCarrier.some(
-    (item) => String(item.client?.state || '').trim().toUpperCase() === stateUpper
+    (item) => normalizeStateCode(item.client?.state) === stateUpper
   );
 
   const reason =

@@ -1,6 +1,7 @@
 // src/lib/business-rules.js
 
 import { formatRadiusNoteDate } from '@/lib/datetime';
+import { normalizeStateCode } from '@/lib/states';
 
 // Año oficial del catálogo de planes no comisionables que valida la aplicación.
 // Los registros de años anteriores se conservan solo como histórico.
@@ -46,7 +47,7 @@ export function areAllRequiredDocsChecked(carrierName, checklist = {}) {
  *            Misma compañía en OTRO estado -> debe ser 1 día después (+1 día) del cliente anterior.
  */
 export function calculateValidDocumentDates({ targetCarrier, clientState, existingCasesForCarrier = [], baseEnrollmentDate = new Date() }) {
-  const stateUpper = String(clientState || '').trim().toUpperCase();
+  const stateUpper = normalizeStateCode(clientState);
   const carrierUpper = String(targetCarrier || '').trim().toUpperCase();
 
   let candidateEnrollment = new Date(baseEnrollmentDate);
@@ -60,7 +61,7 @@ export function calculateValidDocumentDates({ targetCarrier, clientState, existi
   if (validExisting.length > 0) {
     // ¿Existe ya un caso de la misma compañía y el mismo estado?
     const sameStateCase = validExisting.find(
-      (c) => String(c.client?.state || '').trim().toUpperCase() === stateUpper
+      (c) => normalizeStateCode(c.client?.state) === stateUpper
     );
 
     if (sameStateCase) {
@@ -99,7 +100,7 @@ export function validateManualEnrollmentDate({
   existingCasesForCarrier = [],
 }) {
   const carrier = String(targetCarrier || '').trim();
-  const state = String(clientState || '').trim().toUpperCase();
+  const state = normalizeStateCode(clientState);
 
   if (!carrier) {
     return { ok: false, error: 'Confirma la aseguradora antes de validar la fecha.' };
@@ -121,7 +122,7 @@ export function validateManualEnrollmentDate({
   );
 
   const hasSameState = validExisting.some(
-    (item) => String(item.client?.state || '').trim().toUpperCase() === state
+    (item) => normalizeStateCode(item.client?.state) === state
   );
 
   if (hasSameState) {
@@ -129,7 +130,7 @@ export function validateManualEnrollmentDate({
   }
 
   const otherStateCases = validExisting.filter(
-    (item) => String(item.client?.state || '').trim().toUpperCase() !== state
+    (item) => normalizeStateCode(item.client?.state) !== state
   );
 
   if (otherStateCases.length === 0) {

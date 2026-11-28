@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { searchNonCommissionablePlanAction } from '@/app/actions/caseDetailActions';
 import { NON_COMMISSIONABLE_PLAN_YEAR } from '@/lib/business-rules';
+import { normalizeStateCode } from '@/lib/states';
 
 const inputClasses =
   'w-full rounded-xl border border-zinc-300 bg-white py-2.5 pl-9 pr-3 text-sm text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500';
@@ -84,7 +85,7 @@ export default function PlanValidator({
     }
   }
 
-  const stateLabel = clientState || 'sin estado registrado';
+  const stateLabel = normalizeStateCode(clientState) || 'sin estado registrado';
   const isWellcareMode = mode === 'WELLCARE';
 
   return (

@@ -6,7 +6,7 @@
 - **Base de Datos:** PostgreSQL (Neon.tech) con Prisma ORM (`prisma/schema.prisma`).
 - **Estilos:** Tailwind CSS + componentes limpios con `lucide-react`.
 - **Mutaciones:** Usar Server Actions de Next.js (`"use server"`) con `revalidatePath`.
-- **Autenticación y Firma Automática:** Basada en cookies JWT (`jose`). TODA acción (crear nota en línea de tiempo, cambiar estado, reclamar cliente, guardar 21/13 puntos, actualizar documentos) DEBE obtener el usuario en sesión mediante `await getCurrentUser()` en el servidor y atribuir el registro a ese `user.id` automáticamente, sin pedirle al usuario que escriba su nombre.
+- **Autenticación y Firma Automática:** Basada en cookies JWT (`jose`). TODA acción (crear nota en línea de tiempo, cambiar estado, reclamar cliente, guardar 21/13 puntos, actualizar documentos) DEBE obtener el usuario en sesión mediante `await getCurrentUser()` en el servidor y atribuir el registro a ese `user.id` automáticamente, sin pedirle al usuario que escriba su nombre. La sesión dura **400 días** desde cada login.
 
 ## 2. Usuarios del Equipo (Cuentas Preconfiguradas)
 1. **Job** (`job@edufuture.org` - Rol: `AGENT`, código: `JOB`)
@@ -97,6 +97,7 @@ Cada cliente de AEP proviene de una de 5 categorías: `NO_RENOVABLE`, `NO_COMISI
 ### B. Validador de Planes No Comisionables
 - Antes de confirmar el campo `ESTRATEGIA` (Plan Nuevo), el agente puede buscar por `Plan ID` (ej. `H5521-419`) o nombre y Estado en la tabla `NonCommissionablePlan`.
 - El validador consulta **solo el catálogo 2027**. Los registros 2025/2026 se conservan como histórico y no generan alertas.
+- Los estados se normalizan: `FL`, `Florida` y `FLORIDA` son equivalentes. También se soportan `ALL STATES` y valores compuestos como `DC, MD`.
 - Si el plan aparece en la lista de no comisionables 2027 para ese Estado, mostrar alerta roja: `"⚠️ CUIDADO: Este plan figura como NO COMISIONABLE"`.
 - **Wellcare 2027 usa una lista blanca:** los 57 planes de la pestaña `COMISIONABLE WELLCARE 2027` son comisionables. En el validador se selecciona el modo **Wellcare 2027**; si el plan no está en esa lista para el estado del cliente, se marca como **NO comisionable**.
 - La lista blanca vive en la tabla `CommissionablePlan` y se importa con `node prisma/import-wellcare-2027-commissionable.mjs`. No se debe confundir con los registros históricos de Wellcare 2025/2026.
